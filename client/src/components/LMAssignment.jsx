@@ -1,11 +1,11 @@
 import PendingAssignments from "./PendingAssignments";
 
 
-function LMAssignment({ refreshKey, onRequestRefresh }) {
+function LMAssignment({ refreshKey, criteria, onRequestRefresh }) {
 
     return (
         <div>
-            <PendingAssignments refreshKey={refreshKey} onRequestRefresh={onRequestRefresh} />
+            <PendingAssignments refreshKey={refreshKey} criteria={criteria} onRequestRefresh={onRequestRefresh} />
         </div>
     );
 }

@@ -9,6 +9,7 @@ import AssignmentService
 
 function AssignmentModal({
     assignment,
+    criteria,
     onClose,
     onAssigned
 }) {
@@ -38,7 +39,8 @@ function AssignmentModal({
                 const data =
                     await EmployeeService
                         .getAvailableLMs(
-                            assignment.assignedEmpId
+                            assignment.assignedEmpId,
+                            criteria
                         );
 
                 setLineManagers(data);
@@ -100,7 +102,8 @@ function AssignmentModal({
             await AssignmentService
                 .confirmAssignment(
                     assignment.assignmentId,
-                    Number(selectedLM)
+                    Number(selectedLM),
+                    criteria
                 );
 
 

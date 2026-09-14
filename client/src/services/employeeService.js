@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "https://lm-assignment.vercel.app/api/employees";
+// const API_URL = "https://lm-assignment.vercel.app/api/employees";
+const API_URL = "http://localhost:5000/api/employees"
 
 class EmployeeService {
 
@@ -14,8 +15,10 @@ class EmployeeService {
         return response.data.data;
     }
 
-    async getAvailableLMs(employeeId) {
-        const response = await axios.get(`${API_URL}/${employeeId}/available-lms`);
+    async getAvailableLMs(employeeId, criteria) {
+        const response = await axios.get(`${API_URL}/${employeeId}/available-lms`, {
+            params: { criteria: JSON.stringify(criteria) }
+        });
         return response.data.data;
     }
 
@@ -39,6 +42,18 @@ class EmployeeService {
             API_URL,
             employee
         );
+        return response.data.data;
+    }
+
+    async createEmployees(employees) {
+        const response = await axios.post(`${API_URL}/bulk`, { employees });
+        return response.data.data;
+    }
+
+    async importEmployees(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await axios.post(`${API_URL}/import`, formData);
         return response.data.data;
     }
 }

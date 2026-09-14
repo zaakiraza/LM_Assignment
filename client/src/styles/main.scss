@@ -58,6 +58,13 @@ button {
   border-bottom: 1px solid rgba(24, 39, 36, 0.08);
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
 .brand-block {
   display: flex;
   align-items: center;
@@ -104,6 +111,12 @@ button {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.settings-btn {
+  min-height: 42px;
+  padding: 0 18px;
+  white-space: nowrap;
 }
 
 .status-dot {
@@ -168,6 +181,35 @@ button {
   border-radius: 12px;
   font-size: 0.96rem;
   line-height: 1;
+}
+
+.section-header .secondary-btn,
+.section-header .import-btn {
+  height: 42px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 61, 54, 0.16);
+  line-height: 1;
+}
+
+.import-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 18px;
+}
+
+.import-btn input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .counter-pill {
@@ -349,7 +391,8 @@ button {
 }
 
 .secondary-btn {
-  background: #edf1ec;
+  background: #e4ebe5;
+  border: 1px solid rgba(31, 61, 54, 0.14);
   color: var(--primary);
 }
 
@@ -464,6 +507,7 @@ button {
   background: rgba(19, 28, 26, 0.56);
   padding: 18px;
   z-index: 50;
+  overflow: auto;
 }
 
 .modal {
@@ -473,6 +517,55 @@ button {
   border-radius: 20px;
   background: #f7faf5;
   box-shadow: var(--shadow);
+}
+
+.request-modal {
+  width: min(100%, 1100px);
+}
+
+.request-table-wrap {
+  overflow-x: auto;
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.request-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  background: var(--card);
+}
+
+.request-table th,
+.request-table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.request-table th {
+  color: var(--muted);
+  background: var(--panel-alt);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.request-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.table-footer-actions {
+  margin-top: 18px;
 }
 
 .modal-compact {
@@ -558,6 +651,7 @@ button {
 }
 
 .modal-input,
+.modal-form input[type="number"],
 .modal-form select {
   width: 100%;
   padding: 13px 14px;
@@ -567,6 +661,32 @@ button {
   color: var(--text);
   box-shadow: inset 0 1px 2px rgba(24, 39, 36, 0.04);
   font: inherit;
+}
+
+.criteria-form {
+  text-transform: none;
+}
+
+.criteria-options {
+  display: grid;
+  gap: 10px;
+}
+
+.criteria-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text) !important;
+  font-family: "Manrope", sans-serif !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.criteria-option input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--primary);
 }
 
 .modal-form select {
@@ -598,6 +718,23 @@ button {
   color: var(--warning);
 }
 
+.bulk-failures {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(185, 72, 57, 0.25);
+  border-radius: 12px;
+  background: rgba(185, 72, 57, 0.07);
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+.bulk-failures ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
 @media (max-width: 980px) {
   .dashboard-layout {
     grid-template-columns: 1fr;
@@ -611,11 +748,26 @@ button {
 
   .topbar {
     padding: 8px 0 18px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .settings-btn {
+    flex: 1;
   }
 
   .topbar-badge {
     font-size: 0.6rem;
     padding: 8px 10px;
+  }
+
+  .import-btn {
+    width: 100%;
   }
 
   .employee-grid {

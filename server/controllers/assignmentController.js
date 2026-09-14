@@ -5,7 +5,7 @@ class AssignmentController {
 
     createAssignment(req, res) {
         try {
-            const { employeeId, lineManagerId } = req.body;
+            const { employeeId, lineManagerId, criteria } = req.body;
             if (!employeeId || !lineManagerId) {
                 return responseHandler.error(
                     res,
@@ -13,7 +13,7 @@ class AssignmentController {
                     400
                 );
             }
-            const assignment = AssignmentService.createAssignment(employeeId, lineManagerId);
+            const assignment = AssignmentService.createAssignment(employeeId, lineManagerId, criteria);
             return responseHandler.success(
                 res,
                 assignment,
@@ -36,7 +36,8 @@ class AssignmentController {
         try {
 
             const {
-                lineManagerId
+                lineManagerId,
+                criteria
             } = req.body;
 
             const assignmentId =
@@ -46,7 +47,8 @@ class AssignmentController {
             const assignment =
                 AssignmentService.confirmAssignment(
                     assignmentId,
-                    lineManagerId
+                    lineManagerId,
+                    criteria
                 );
 
 
@@ -86,6 +88,44 @@ class AssignmentController {
                 error.message,
                 400
             );
+        }
+    }
+
+    confirmAllAssignments(req, res) {
+        try {
+            const { criteria } = req.body;
+            const assignments = AssignmentService.getPendingAssignments();
+            const results = assignments.map((assignment) => {
+                try {
+                    return AssignmentService.confirmAssignment(assignment.assignmentId, assignment.lineManagerId, criteria);
+                }
+                catch (error) {
+                    return {
+                        assignmentId: assignment.assignmentId,
+                        employeeName: assignment.employeeName,
+                        lineManagerName: assignment.lineManagerName,
+                        error: error.message
+                    };
+                }
+            });
+            const failed = results.filter((result) => result.error);
+            return responseHandler.success(res, { results, failed }, "Pending assignments processed");
+        }
+        catch (error) {
+            console.error(error);
+            return responseHandler.error(res, error.message, 400);
+        }
+    }
+
+    rejectAllAssignments(req, res) {
+        try {
+            const assignments = AssignmentService.getPendingAssignments();
+            const results = assignments.map((assignment) => AssignmentService.rejectAssignment(assignment.assignmentId));
+            return responseHandler.success(res, { rejectedCount: results.length }, "Pending assignments rejected");
+        }
+        catch (error) {
+            console.error(error);
+            return responseHandler.error(res, error.message, 400);
         }
     }
 

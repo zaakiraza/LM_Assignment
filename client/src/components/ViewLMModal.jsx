@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import AssignLMModal from "./AssignLMModal";
 
-function ViewLMModal({ employee, assignment, onClose, onChanged }) {
+function ViewLMModal({ employee, assignment, criteria, onClose, onChanged }) {
     const [changeLM, setChangeLM] = useState(false);
 
     if (changeLM) {
@@ -10,6 +10,7 @@ function ViewLMModal({ employee, assignment, onClose, onChanged }) {
             <AssignLMModal
                 employee={employee}
                 currentAssignment={assignment}
+                criteria={criteria}
                 onClose={() => setChangeLM(false)}
                 onAssigned={() => {
                     setChangeLM(false);

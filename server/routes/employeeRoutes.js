@@ -1,10 +1,13 @@
 import express from "express";
 import employeeController from "../controllers/employeeController.js";
+import excelUpload from "../middleware/excelUploadMiddleware.js";
 
 const router = express.Router();
 
 router.get("/", employeeController.getEmployees);
 router.post("/", employeeController.createEmployee);
+router.post("/bulk", employeeController.createEmployees);
+router.post("/import", excelUpload, employeeController.importEmployees);
 router.put("/:employeeId", employeeController.updateEmployee);
 router.delete("/:employeeId", employeeController.deleteEmployee);
 router.get("/line-manager/:lineManagerId/assignees", employeeController.getAssignedEmployeesForManager);

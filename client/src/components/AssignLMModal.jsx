@@ -4,6 +4,7 @@ import AssignmentService from "../services/assignmentService";
 
 function AssignLMModal({ employee,
     currentAssignment,
+    criteria,
     onClose,
     onAssigned }) {
     const [lineManagers, setLineManagers] = useState([]);
@@ -17,7 +18,8 @@ function AssignLMModal({ employee,
             try {
                 const data =
                     await EmployeeService.getAvailableLMs(
-                        employee.id
+                        employee.id,
+                        criteria
                     );
 
                 const filteredLMs =
@@ -48,7 +50,7 @@ function AssignLMModal({ employee,
         try {
             setSubmitting(true);
             setError("");
-            await AssignmentService.createAssignment(employee.id, Number(selectedLM));
+            await AssignmentService.createAssignment(employee.id, Number(selectedLM), criteria);
             onAssigned();
             onClose();
         } catch (error) {

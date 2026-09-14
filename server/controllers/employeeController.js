@@ -1,5 +1,6 @@
 import EmployeeService from "../services/employeeService.js";
 import responseHandler from "../utils/responseHandler.js";
+import XLSX from "xlsx";
 
 class EmployeeController {
 
@@ -74,6 +75,44 @@ class EmployeeController {
         }
     }
 
+    createEmployees(req, res) {
+        try {
+            const importedCount = EmployeeService.createEmployees(req.body.employees);
+            return responseHandler.success(res, { importedCount }, "Employees added successfully", 201);
+        }
+        catch (error) {
+            console.error(error);
+            return responseHandler.error(res, error.message || "Failed to add employees", 400);
+        }
+    }
+
+    importEmployees(req, res) {
+        try {
+            if (!req.file) {
+                return responseHandler.error(res, "An Excel file is required", 400);
+            }
+
+            const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+            const employees = rows.map((row) => ({
+                id: row.id || row.ID || undefined,
+                name: row.name || row.Name,
+                designation: row.designation || row.Designation,
+                experience: row.experience ?? row.Experience,
+                department: row.department || row.Department,
+                skills: row.skills || row.Skills || ""
+            }));
+
+            const importedCount = EmployeeService.createEmployees(employees);
+            return responseHandler.success(res, { importedCount }, "Employees imported successfully", 201);
+        }
+        catch (error) {
+            console.error(error);
+            return responseHandler.error(res, error.message || "Failed to import employees", 400);
+        }
+    }
+
     updateEmployee(req, res) {
         try {
             const { employeeId } = req.params;
@@ -118,7 +157,11 @@ class EmployeeController {
     getAvailableLMs(req, res) {
         try {
             const { employeeId } = req.params;
-            const lineManagers = EmployeeService.getAvailableLMs(Number(employeeId));
+            let criteria;
+            if (req.query.criteria) {
+                criteria = JSON.parse(req.query.criteria);
+            }
+            const lineManagers = EmployeeService.getAvailableLMs(Number(employeeId), criteria);
             return responseHandler.success(
                 res,
                 lineManagers,

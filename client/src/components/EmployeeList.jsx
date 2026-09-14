@@ -5,8 +5,10 @@ import AssignLMModal from "./AssignLMModal";
 import ViewLMModal from "./ViewLMModal";
 import AddEmployeeModal from "./AddEmployeeModal";
 import EditEmployeeModal from "./EditEmployeeModal";
+import ExcelPreviewModal from "./ExcelPreviewModal";
+import * as XLSX from "xlsx";
 
-function EmployeeList({ onRequestRefresh }) {
+function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     const [employees, setEmployees] = useState([]);
     const [assignments, setAssignments] = useState({});
     const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -16,6 +18,8 @@ function EmployeeList({ onRequestRefresh }) {
     const [showAddEmployee, setShowAddEmployee] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [assigneeView, setAssigneeView] = useState(null);
+    const [importing, setImporting] = useState(false);
+    const [previewRows, setPreviewRows] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -45,10 +49,10 @@ function EmployeeList({ onRequestRefresh }) {
     };
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [refreshKey]);
 
     const handleSeeAssignees = async (employee) => {
-        const isLineManager = ["Software Architect", "Lead Software Engineer"].includes(employee.designation);
+        const isLineManager = criteria.allowedDesignations.includes(employee.designation);
         if (!isLineManager) {
             setAssigneeView({
                 lineManagerName: employee.name,
@@ -76,6 +80,80 @@ function EmployeeList({ onRequestRefresh }) {
 
     const handleEditEmployee = (employee) => {
         setEditingEmployee(employee);
+    };
+
+    const handleImportEmployees = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+
+        try {
+            setImporting(true);
+            const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const spreadsheetRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+            const normalizedRows = spreadsheetRows.map((row, index) => ({
+                id: row.id || row.ID || Date.now() + index,
+                name: row.name || row.Name || "",
+                designation: row.designation || row.Designation || "",
+                experience: row.experience ?? row.Experience ?? "",
+                department: row.department || row.Department || "",
+                skills: String(row.skills || row.Skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
+                _rowId: `${Date.now()}-${index}`
+            }));
+
+            if (!normalizedRows.length) {
+                throw new Error("The Excel file does not contain any employee rows");
+            }
+
+            setPreviewRows(normalizedRows);
+        }
+        catch (importError) {
+            console.error(importError);
+            setError(importError.response?.data?.message || importError.message || "Failed to preview employees");
+        }
+        finally {
+            setImporting(false);
+        }
+    };
+
+    const addPreviewEmployee = async (employee) => {
+        try {
+            setImporting(true);
+            const { _rowId, ...payload } = employee;
+            await EmployeeService.createEmployee(payload);
+            await fetchData();
+            onRequestRefresh?.();
+            return true;
+        }
+        catch (addError) {
+            console.error(addError);
+            setError(addError.response?.data?.message || "Failed to add employee");
+            return false;
+        }
+        finally {
+            setImporting(false);
+        }
+    };
+
+    const addAllPreviewEmployees = async (employeesToAdd) => {
+        try {
+            setImporting(true);
+            const payload = employeesToAdd.map(({ _rowId, ...employee }) => employee);
+            await EmployeeService.createEmployees(payload);
+            await fetchData();
+            onRequestRefresh?.();
+            setPreviewRows(null);
+            return true;
+        }
+        catch (addError) {
+            console.error(addError);
+            setError(addError.response?.data?.message || "Failed to add employees");
+            return false;
+        }
+        finally {
+            setImporting(false);
+        }
     };
 
     const handleDeleteEmployee = async (employee) => {
@@ -113,6 +191,10 @@ function EmployeeList({ onRequestRefresh }) {
                     >
                         + Add Employee
                     </button>
+                    <label className="secondary-btn import-btn">
+                        {importing ? "Importing..." : "Import Excel"}
+                        <input type="file" accept=".xlsx,.xls" onChange={handleImportEmployees} disabled={importing} />
+                    </label>
                 </div>
                 <span className="counter-pill">{employees.length} total</span>
             </div>
@@ -124,10 +206,20 @@ function EmployeeList({ onRequestRefresh }) {
                 />
             )}
 
+            {previewRows && (
+                <ExcelPreviewModal
+                    rows={previewRows}
+                    saving={importing}
+                    onClose={() => setPreviewRows(null)}
+                    onAdd={addPreviewEmployee}
+                    onAddAll={addAllPreviewEmployees}
+                />
+            )}
+
             <div className="employee-list">
                 {employees.map((employee) => {
                     const assignment = assignments[employee.id];
-                    const isLineManager = ["Software Architect", "Lead Software Engineer"].includes(employee.designation);
+                    const isLineManager = criteria.allowedDesignations.includes(employee.designation);
 
                     let skills = "";
                     if (Array.isArray(employee.skills)) {
@@ -262,6 +354,7 @@ function EmployeeList({ onRequestRefresh }) {
             {selectedEmployee && (
                 <AssignLMModal
                     employee={selectedEmployee}
+                    criteria={criteria}
                     onClose={() => setSelectedEmployee(null)}
                     onAssigned={() => {
                         setSelectedEmployee(null);
@@ -275,6 +368,7 @@ function EmployeeList({ onRequestRefresh }) {
                 <ViewLMModal
                     employee={viewEmployee}
                     assignment={assignments[viewEmployee.id]}
+                    criteria={criteria}
                     onClose={() => setViewEmployee(null)}
                     onChanged={() => {
                         setViewEmployee(null);

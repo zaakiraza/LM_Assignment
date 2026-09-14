@@ -3,7 +3,7 @@ import db from "../database/database.js";
 
 class AssignmentService {
 
-    createAssignment(employeeId, lineManagerId) {
+    createAssignment(employeeId, lineManagerId, criteria = {}) {
         // 1. Check Employee exist
         const employee = db.prepare(`SELECT * FROM employees WHERE id = ?`).get(employeeId);
         if (!employee) {
@@ -22,18 +22,27 @@ class AssignmentService {
         }
 
         // 4. Check LM designation
-        const validDesignation = lineManager.designation === "Software Architect" || lineManager.designation === "Lead Software Engineer";
-        if (!validDesignation) {
+        const allowedDesignations = Array.isArray(criteria.allowedDesignations)
+            ? criteria.allowedDesignations
+            : [];
+        const maxManagedEmployees = Number(criteria.maxManagedEmployees);
+        const requireSameDepartment = criteria.requireSameDepartment !== false;
+
+        if (!allowedDesignations.length || !Number.isFinite(maxManagedEmployees)) {
+            throw new Error("Valid assignment criteria are required");
+        }
+
+        if (!allowedDesignations.includes(lineManager.designation)) {
             throw new Error("Selected employee cannot be a Line Manager");
         }
 
         // 5. Check same department
-        if (employee.department !== lineManager.department) {
+        if (requireSameDepartment && employee.department !== lineManager.department) {
             throw new Error("Line Manager must belong to the same department");
         }
 
         // 6. Check LM capacity
-        if (lineManager.employeeManaged >= 4) {
+        if (lineManager.employeeManaged >= maxManagedEmployees) {
             throw new Error("Line Manager has reached maximum capacity");
         }
 
@@ -67,7 +76,8 @@ class AssignmentService {
 
     confirmAssignment(
         assignmentId,
-        selectedLineManagerId
+        selectedLineManagerId,
+        criteria = {}
     ) {
 
         const assignment =
@@ -136,12 +146,17 @@ class AssignmentService {
         /*
          * Check designation
          */
-        if (
-            newLM.designation !==
-            "Software Architect" &&
-            newLM.designation !==
-            "Lead Software Engineer"
-        ) {
+        const allowedDesignations = Array.isArray(criteria.allowedDesignations)
+            ? criteria.allowedDesignations
+            : [];
+        const maxManagedEmployees = Number(criteria.maxManagedEmployees);
+        const requireSameDepartment = criteria.requireSameDepartment !== false;
+
+        if (!allowedDesignations.length || !Number.isFinite(maxManagedEmployees)) {
+            throw new Error("Valid assignment criteria are required");
+        }
+
+        if (!allowedDesignations.includes(newLM.designation)) {
 
             throw new Error(
                 "Selected employee cannot be a Line Manager"
@@ -167,10 +182,7 @@ class AssignmentService {
         /*
          * Same department
          */
-        if (
-            newLM.department !==
-            employee.department
-        ) {
+        if (requireSameDepartment && newLM.department !== employee.department) {
 
             throw new Error(
                 "Line Manager must belong to the same department"
@@ -217,9 +229,7 @@ class AssignmentService {
          * Only necessary when this is a
          * new/different LM.
          */
-        if (
-            newLM.employeeManaged >= 4
-        ) {
+        if (newLM.employeeManaged >= maxManagedEmployees) {
 
             throw new Error(
                 "Line Manager has reached maximum capacity"

@@ -37,6 +37,39 @@ class EmployeeService {
         return this.getEmployeeById(employee.id);
     }
 
+    createEmployees(employees) {
+        if (!Array.isArray(employees) || employees.length === 0) {
+            throw new Error("At least one employee is required");
+        }
+
+        const insertEmployee = db.prepare(`
+            INSERT INTO employees (
+                id, name, designation, experience, department, skills, employeeManaged
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const transaction = db.transaction((records) => {
+            records.forEach((employee) => {
+                if (!employee.name || !employee.designation || employee.experience === undefined || !employee.department) {
+                    throw new Error("Each employee must include name, designation, experience, and department");
+                }
+
+                insertEmployee.run(
+                    employee.id || Date.now() + Math.floor(Math.random() * 100000),
+                    employee.name,
+                    employee.designation,
+                    Number(employee.experience),
+                    employee.department,
+                    JSON.stringify(Array.isArray(employee.skills) ? employee.skills : String(employee.skills || "").split(",").map((skill) => skill.trim()).filter(Boolean)),
+                    0
+                );
+            });
+        });
+
+        transaction(employees);
+        return employees.length;
+    }
+
     updateEmployee(employeeId, employee) {
         const existingEmployee = this.getEmployeeById(employeeId);
         if (!existingEmployee) {
@@ -107,12 +140,28 @@ class EmployeeService {
         return { deletedId: employeeId, deleted: true };
     }
 
-    getAvailableLMs(employeeId) {
+    getAvailableLMs(employeeId, criteria = {}) {
 
         const employee = db.prepare(`SELECT * FROM employees WHERE id = ?`).get(employeeId);
         if (!employee) {
             throw new Error("Employee does not exist");
         }
+
+        const allowedDesignations = Array.isArray(criteria.allowedDesignations)
+            ? criteria.allowedDesignations
+            : [];
+        const maxManagedEmployees = Number(criteria.maxManagedEmployees);
+        const requireSameDepartment = criteria.requireSameDepartment !== false;
+
+        if (!allowedDesignations.length || !Number.isFinite(maxManagedEmployees)) {
+            throw new Error("Valid assignment criteria are required");
+        }
+
+        const designationPlaceholders = allowedDesignations.map(() => "?").join(", ");
+        const departmentClause = requireSameDepartment ? "AND department = ?" : "";
+        const queryParameters = requireSameDepartment
+            ? [employee.department, ...allowedDesignations, maxManagedEmployees, employeeId]
+            : [...allowedDesignations, maxManagedEmployees, employeeId];
 
         const lineManagers = db.prepare(`
             SELECT
@@ -124,12 +173,10 @@ class EmployeeService {
                 skills,
                 employeeManaged
             FROM employees
-            WHERE department = ?
-            AND designation IN (
-                'Software Architect',
-                'Lead Software Engineer'
-            )
-            AND employeeManaged < 4
+            WHERE 1 = 1
+            ${departmentClause}
+            AND designation IN (${designationPlaceholders})
+            AND employeeManaged < ?
             AND id != ?
             ORDER BY
                 employeeManaged ASC,
@@ -139,10 +186,7 @@ class EmployeeService {
                     ELSE 1
                 END ASC,
                 id ASC
-        `).all(
-            employee.department,
-            employeeId
-        );
+        `).all(...queryParameters);
         return lineManagers;
     }
 
