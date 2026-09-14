@@ -9,6 +9,7 @@ function App() {
     const [assignmentRefreshKey, setAssignmentRefreshKey] = useState(0);
     const [assignmentCriteria, setAssignmentCriteria] = useState(defaultAssignmentCriteria);
     const [showCriteria, setShowCriteria] = useState(false);
+    
     const triggerAssignmentRefresh = () => {
         setAssignmentRefreshKey((current) => current + 1);
     };
@@ -31,6 +32,12 @@ function App() {
                     <button type="button" className="primary-btn settings-btn" onClick={() => setShowCriteria(true)}>
                         Assignment settings
                     </button>
+                    <LMAssignment
+                        refreshKey={assignmentRefreshKey}
+                        criteria={assignmentCriteria}
+                        compact
+                        onRequestRefresh={triggerAssignmentRefresh}
+                    />
                 </div>
             </header>
 
@@ -54,13 +61,6 @@ function App() {
                     />
                 </section>
 
-                <aside className="panel panel-side">
-                    <LMAssignment
-                        refreshKey={assignmentRefreshKey}
-                        criteria={assignmentCriteria}
-                        onRequestRefresh={triggerAssignmentRefresh}
-                    />
-                </aside>
             </main>
         </div>
     );

@@ -33,6 +33,8 @@ Frontend:
 - client/src/components/AddEmployeeModal.jsx
 - client/src/components/EditEmployeeModal.jsx
 - client/src/components/AssignmentCriteriaModal.jsx
+- client/src/components/ExcelPreviewModal.jsx
+- client/src/components/LMAssignment.jsx
 - client/src/services/employeeService.js
 - client/src/services/assignmentService.js
 - client/src/styles/main.scss
@@ -52,22 +54,25 @@ Backend:
 ## 3. Core business rules
 
 ### Employee and manager logic
-- A line manager must be one of:
+- The default eligible line manager designations are:
   - Software Architect
   - Lead Software Engineer
 - Employee cannot be their own line manager.
-- Line manager must belong to the same department as the employee.
+- The default rule requires the line manager and employee to belong to the same department.
 
 Assignment criteria are edited from the `Assignment settings` button in the UI and kept in `App` state. The default values are defined in `client/src/config/assignmentCriteria.js`; the active `maxManagedEmployees`, `allowedDesignations`, and `requireSameDepartment` values are sent with recommendation and assignment API calls.
-- A manager cannot exceed 4 assigned employees.
-- The manager capacity, eligible designations, and department rule are runtime criteria configured from the UI.
+- The manager capacity, eligible designations, and department rule are runtime criteria configured from the UI. The default maximum is 4, but it can be changed without editing backend code.
 - Only active assignment records count toward employeeManaged.
 
 ### Assignment flow
 - Create assignment request from employee to selected manager.
-- Pending assignments are opened from the LM Assignment panel in a table modal.
-- Excel imports use `POST /api/employees/import` with a multipart field named `file`. The first worksheet should contain `name`, `designation`, `experience`, `department`, and `skills` columns. Skills may be comma-separated.
-- The UI previews Excel rows before saving. Row `Add` uses the normal employee create API, `Add All` uses `POST /api/employees/bulk`, and `Cancel` discards unsaved preview rows.
+- Pending assignments are opened from the compact `View requests` button in the top bar. The old right-side request panel has been removed, so the employee roster uses the full page width.
+- The request modal shows a table with employee, department, requested LM, designation, and row-level Assign/Reject actions.
+- The request modal also provides Assign All and Reject All actions. Bulk assignment failures include the employee name, LM name, and reason, while remaining requests stay available for individual action.
+- Excel selection does not save immediately. The client parses the first worksheet with the `xlsx` package and opens `ExcelPreviewModal`.
+- The first worksheet should contain `name`, `designation`, `experience`, `department`, and `skills` columns. An optional `id` column is supported. Skills may be comma-separated.
+- Preview row `Add` saves one employee through `POST /api/employees`; `Add All` saves remaining rows transactionally through `POST /api/employees/bulk`; `Cancel` discards unsaved rows.
+- The legacy multipart endpoint `POST /api/employees/import` remains available, but the current UI uses client-side preview before saving.
 - Bulk actions use `PATCH /api/assignments/bulk-confirm` and `PATCH /api/assignments/bulk-reject`.
 - Rejecting a request removes it from pending state.
 - Confirming an assignment updates the employee assignment and increments the manager count.
@@ -87,6 +92,9 @@ Rule:
 ### Pending requests refresh
 When a request is created, confirmed, rejected, or updated, the pending list should reload immediately.
 Do not rely on a full page refresh.
+
+### Employee card actions
+Employee cards use a three-dot action menu instead of displaying all action buttons at once. The menu contains Add LM or View LM, Edit, Delete, and See Assignees for eligible managers.
 
 ### Employee edit flow
 Employee edit is implemented through a modal, not browser prompts.
@@ -118,8 +126,7 @@ The Add LM modal should not include a See Assignees button.
 The See Assignees button is meant for the manager-focused UI, not the assignment request modal.
 
 ### Request rejection
-There must be a visible reject action in the pending LM assignment card.
-This should call the assignment reject endpoint and immediately refresh the pending list.
+The request table must provide a visible row-level Reject action and a Reject All action. These should call the assignment reject endpoints and immediately refresh the pending list.
 
 ## 6. Deployment reality
 Important: the backend is currently built around local SQLite and is not fully Vercel-ready.
@@ -146,8 +153,10 @@ If an AI or developer is updating this project, these are the most important fil
 4. client/src/components/PendingAssignments.jsx
 5. client/src/components/AssignLMModal.jsx
 6. client/src/components/AssignmentModal.jsx
-7. server/database/database.js
-8. client/src/styles/main.scss
+7. client/src/components/ExcelPreviewModal.jsx
+8. client/src/App.jsx
+9. server/database/database.js
+10. client/src/styles/main.scss
 
 ## 8. Local developer commands
 Frontend:
@@ -165,6 +174,10 @@ Before making changes, check:
 - assignment state and manager counts
 - line manager capacity rules
 - pending request refresh behavior
+- staged Excel preview must not write to the database until Add or Add All is clicked
+- bulk assignment failures must identify the affected employee and manager
+- keep request controls compact in the top bar; do not restore the removed right-side panel
+- keep employee actions inside the three-dot menu
 - no prompt-based editing should be used unless intentionally retained
 - do not break employee skills parsing
 - do not deploy the SQLite backend to Vercel as-is

@@ -65,6 +65,22 @@ button {
   gap: 14px;
 }
 
+.compact-request {
+  display: flex;
+  align-items: center;
+}
+
+.compact-request .section-header {
+  display: none;
+}
+
+.compact-request .full {
+  width: auto;
+  min-height: 42px;
+  margin: 0;
+  white-space: nowrap;
+}
+
 .brand-block {
   display: flex;
   align-items: center;
@@ -130,7 +146,7 @@ button {
 
 .dashboard-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 28px;
   margin-top: 26px;
 }
@@ -333,6 +349,66 @@ button {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
+}
+
+.employee-action-menu {
+  position: relative;
+}
+
+.menu-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(31, 61, 54, 0.16);
+  border-radius: 12px;
+  background: #e4ebe5;
+  color: var(--primary);
+  font-size: 1.55rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.menu-btn:hover,
+.menu-btn[aria-expanded="true"] {
+  background: var(--primary);
+  color: white;
+}
+
+.action-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  display: grid;
+  min-width: 170px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 14px 30px rgba(13, 29, 24, 0.16);
+}
+
+.action-menu-item {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 700;
+}
+
+.action-menu-item:hover {
+  background: var(--panel-alt);
+}
+
+.action-menu-primary {
+  color: var(--primary);
+}
+
+.action-menu-danger {
+  color: var(--danger);
 }
 
 .assignee-preview-wrap {

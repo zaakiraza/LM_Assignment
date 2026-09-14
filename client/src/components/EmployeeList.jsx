@@ -20,6 +20,7 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     const [assigneeView, setAssigneeView] = useState(null);
     const [importing, setImporting] = useState(false);
     const [previewRows, setPreviewRows] = useState(null);
+    const [openActionMenu, setOpenActionMenu] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -36,7 +37,6 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
             assignmentResults.forEach(({ employeeId, assignment }) => {
                 assignmentMap[employeeId] = assignment;
             });
-
             setAssignments(assignmentMap);
         }
         catch (error) {
@@ -105,7 +105,6 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
             if (!normalizedRows.length) {
                 throw new Error("The Excel file does not contain any employee rows");
             }
-
             setPreviewRows(normalizedRows);
         }
         catch (importError) {
@@ -270,30 +269,42 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                             </div>
 
                             <div className="employee-card-actions">
-                                {assignment ? (
-                                    <>
-                                        <button className="secondary-btn" onClick={() => setViewEmployee(employee)}>
-                                            View LM
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button className="primary-btn" onClick={() => setSelectedEmployee(employee)}>
-                                            Add LM
-                                        </button>
-                                    </>
-                                )}
-                                <button className="secondary-btn" onClick={() => handleEditEmployee(employee)}>
-                                    Edit
-                                </button>
-                                <button className="secondary-btn danger-btn" onClick={() => handleDeleteEmployee(employee)}>
-                                    Delete
-                                </button>
-                                {isLineManager && (
-                                    <button className="secondary-btn" onClick={() => handleSeeAssignees(employee)}>
-                                        See Assignees
+                                <div className="employee-action-menu">
+                                    <button
+                                        type="button"
+                                        className="menu-btn"
+                                        aria-label={`Open actions for ${employee.name}`}
+                                        aria-expanded={openActionMenu === employee.id}
+                                        onClick={() => setOpenActionMenu((current) => current === employee.id ? null : employee.id)}
+                                    >
+                                        <span aria-hidden="true">⋮</span>
                                     </button>
-                                )}
+
+                                    {openActionMenu === employee.id && (
+                                        <div className="action-menu" role="menu">
+                                            {assignment ? (
+                                                <button type="button" className="action-menu-item" onClick={() => { setViewEmployee(employee); setOpenActionMenu(null); }}>
+                                                    View LM
+                                                </button>
+                                            ) : (
+                                                <button type="button" className="action-menu-item action-menu-primary" onClick={() => { setSelectedEmployee(employee); setOpenActionMenu(null); }}>
+                                                    Add LM
+                                                </button>
+                                            )}
+                                            <button type="button" className="action-menu-item" onClick={() => { handleEditEmployee(employee); setOpenActionMenu(null); }}>
+                                                Edit
+                                            </button>
+                                            <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleDeleteEmployee(employee); setOpenActionMenu(null); }}>
+                                                Delete
+                                            </button>
+                                            {isLineManager && (
+                                                <button type="button" className="action-menu-item" onClick={() => { handleSeeAssignees(employee); setOpenActionMenu(null); }}>
+                                                    See Assignees
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </article>
                     );

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AssignmentService from "../services/assignmentService";
 import AssignmentModal from "./AssignmentModal";
 
-function PendingAssignments({ refreshKey, criteria, onRequestRefresh }) {
+function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh }) {
     const [assignments, setAssignments] = useState([]);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -16,10 +16,12 @@ function PendingAssignments({ refreshKey, criteria, onRequestRefresh }) {
             setLoading(true);
             const data = await AssignmentService.getPendingAssignments();
             setAssignments(data);
-        } catch (error) {
+        }
+        catch (error) {
             console.error(error);
             setError("Failed to load pending assignments");
-        } finally {
+        }
+        finally {
             setLoading(false);
         }
     };
@@ -84,14 +86,14 @@ function PendingAssignments({ refreshKey, criteria, onRequestRefresh }) {
     }
 
     return (
-        <div className="pending-section">
-            <div className="section-header compact">
-                <div>
+        <div className={`pending-section${compact ? " compact-request" : ""}`}>
+            {/* <div className="section-header compact"> */}
+            {/* <div>
                     <p className="eyebrow">Requests</p>
                     <h2>LM Assignment</h2>
-                </div>
-                <span className="counter-pill neutral">{assignments.length}</span>
-            </div>
+                </div> */}
+            {/* <span className="counter-pill neutral">{assignments.length}</span> */}
+            {/* </div> */}
 
             <button type="button" className="primary-btn full" onClick={() => setShowRequests(true)}>
                 View requests ({assignments.length})
@@ -114,7 +116,13 @@ function PendingAssignments({ refreshKey, criteria, onRequestRefresh }) {
                             <div className="request-table-wrap">
                                 <table className="request-table">
                                     <thead>
-                                        <tr><th>Employee</th><th>Department</th><th>Requested LM</th><th>Designation</th><th>Actions</th></tr>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Department</th>
+                                            <th>Requested LM</th>
+                                            <th>Designation</th>
+                                            <th>Actions</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         {assignments.map((assignment) => (

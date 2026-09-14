@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 import EmployeeService from "../services/employeeService";
 import AssignmentService from "../services/assignmentService";
 
-function AssignLMModal({ employee,
-    currentAssignment,
-    criteria,
-    onClose,
-    onAssigned }) {
+function AssignLMModal({ employee, currentAssignment, criteria, onClose, onAssigned }) {
     const [lineManagers, setLineManagers] = useState([]);
     const [selectedLM, setSelectedLM] = useState("");
     const [loading, setLoading] = useState(true);
@@ -16,30 +12,20 @@ function AssignLMModal({ employee,
     useEffect(() => {
         const fetchLineManagers = async () => {
             try {
-                const data =
-                    await EmployeeService.getAvailableLMs(
-                        employee.id,
-                        criteria
-                    );
-
-                const filteredLMs =
-                    data.filter(
-                        (lm) =>
-                            lm.id !==
-                            currentAssignment?.lineManagerId
-                    );
-
+                const data = await EmployeeService.getAvailableLMs(employee.id, criteria);
+                const filteredLMs = data.filter((lm) => lm.id !== currentAssignment?.lineManagerId);
                 setLineManagers(filteredLMs);
-            } catch (error) {
+            }
+            catch (error) {
                 console.error(error);
                 setError("Failed to load available Line Managers");
-            } finally {
+            }
+            finally {
                 setLoading(false);
             }
         };
         fetchLineManagers();
-    }, [employee.id,
-        currentAssignment]);
+    }, [employee.id, currentAssignment]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
