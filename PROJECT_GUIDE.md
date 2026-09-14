@@ -170,3 +170,4 @@ Before making changes, check:
 - do not deploy the SQLite backend to Vercel as-is
 
 This guide should be treated as the project’s working memory for future updates.
+
