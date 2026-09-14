@@ -10,6 +10,26 @@ class AssignmentService {
             throw new Error("Employee does not exist");
         }
 
+        if (!lineManagerId) {
+            const pendingRequest = db.prepare(`SELECT * FROM assignments WHERE assignedEmpId = ? AND isConfirm = 0`).get(employeeId);
+            if (pendingRequest) {
+                throw new Error("Employee already has a pending LM request");
+            }
+
+            const result = db.prepare(`
+                INSERT INTO assignments (assignedEmpId, lineManagerId, isConfirm, isActive)
+                VALUES (?, NULL, 0, 0)
+            `).run(employeeId);
+
+            return {
+                assignmentId: result.lastInsertRowid,
+                assignedEmpId: employeeId,
+                lineManagerId: null,
+                isConfirm: 0,
+                isActive: 0
+            };
+        }
+
         // 2. Check LM exists
         const lineManager = db.prepare(`SELECT * FROM employees WHERE id = ?`).get(lineManagerId);
         if (!lineManager) {
@@ -347,7 +367,7 @@ class AssignmentService {
         JOIN employees employee
             ON employee.id = a.assignedEmpId
 
-        JOIN employees lm
+        LEFT JOIN employees lm
             ON lm.id = a.lineManagerId
 
         WHERE a.assignmentId = ?
@@ -383,7 +403,7 @@ class AssignmentService {
 
         FROM assignments a
 
-        JOIN employees lm
+        LEFT JOIN employees lm
             ON lm.id = a.lineManagerId
 
         WHERE a.assignedEmpId = ?
@@ -444,6 +464,27 @@ class AssignmentService {
         };
     }
 
+    cancelPendingAssignment(assignmentId) {
+        const assignment = db.prepare(`
+            SELECT *
+            FROM assignments
+            WHERE assignmentId = ?
+            AND isConfirm = 0
+        `).get(assignmentId);
+
+        if (!assignment) {
+            throw new Error("Pending assignment request not found");
+        }
+
+        db.prepare(`DELETE FROM assignments WHERE assignmentId = ?`).run(assignmentId);
+
+        return {
+            assignmentId,
+            assignedEmpId: assignment.assignedEmpId,
+            cancelled: true
+        };
+    }
+
     getPendingAssignments() {
         return db.prepare(`
         SELECT
@@ -465,7 +506,7 @@ class AssignmentService {
         JOIN employees employee
             ON employee.id = a.assignedEmpId
 
-        JOIN employees lm
+        LEFT JOIN employees lm
             ON lm.id = a.lineManagerId
 
         WHERE a.isConfirm = 0

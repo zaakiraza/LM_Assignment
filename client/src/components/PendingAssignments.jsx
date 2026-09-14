@@ -7,7 +7,7 @@ function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh })
     const [selectedAssignment, setSelectedAssignment] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [showRequests, setShowRequests] = useState(false);
+    const [showRequests, setShowRequests] = useState(!compact);
     const [processing, setProcessing] = useState(false);
     const [bulkFailures, setBulkFailures] = useState([]);
 
@@ -95,19 +95,21 @@ function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh })
             {/* <span className="counter-pill neutral">{assignments.length}</span> */}
             {/* </div> */}
 
-            <button type="button" className="primary-btn full" onClick={() => setShowRequests(true)}>
-                View requests ({assignments.length})
-            </button>
+            {compact && (
+                <button type="button" className="primary-btn full" onClick={() => setShowRequests(true)}>
+                    View requests ({assignments.length})
+                </button>
+            )}
 
             {showRequests && (
-                <div className="modal-overlay">
-                    <div className="modal request-modal">
+                <div className={compact ? "modal-overlay" : "request-page-surface"}>
+                    <div className={compact ? "modal request-modal" : "request-page-table"}>
                         <div className="modal-head">
                             <div>
                                 <p className="eyebrow">Requests</p>
                                 <h2>Pending LM assignments</h2>
                             </div>
-                            <button type="button" className="icon-close" onClick={() => setShowRequests(false)}>×</button>
+                            {compact && <button type="button" className="icon-close" onClick={() => setShowRequests(false)}>×</button>}
                         </div>
 
                         {assignments.length === 0 ? (
@@ -129,8 +131,8 @@ function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh })
                                             <tr key={assignment.assignmentId}>
                                                 <td>{assignment.employeeName}</td>
                                                 <td>{assignment.employeeDepartment}</td>
-                                                <td>{assignment.lineManagerName}</td>
-                                                <td>{assignment.lineManagerDesignation}</td>
+                                                <td>{assignment.lineManagerName || "Not selected yet"}</td>
+                                                <td>{assignment.lineManagerDesignation || "Pending manager selection"}</td>
                                                 <td className="table-actions">
                                                     <button className="secondary-btn small-btn" disabled={processing} onClick={() => handleReject(assignment.assignmentId)}>Reject</button>
                                                     <button className="primary-btn small-btn" disabled={processing} onClick={() => setSelectedAssignment(assignment)}>Assign</button>

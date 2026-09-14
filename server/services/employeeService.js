@@ -53,7 +53,6 @@ class EmployeeService {
                 if (!employee.name || !employee.designation || employee.experience === undefined || !employee.department) {
                     throw new Error("Each employee must include name, designation, experience, and department");
                 }
-
                 insertEmployee.run(
                     employee.id || Date.now() + Math.floor(Math.random() * 100000),
                     employee.name,

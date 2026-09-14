@@ -22,6 +22,11 @@ class EmployeeService {
         return response.data.data;
     }
 
+    async getAiRecommendation(employeeId, criteria) {
+        const response = await axios.post(`${API_URL}/${employeeId}/ai-recommendation`, { criteria });
+        return response.data.data;
+    }
+
     async getLineManagerAssignees(lineManagerId) {
         const response = await axios.get(`${API_URL}/line-manager/${lineManagerId}/assignees`);
         return response.data.data;

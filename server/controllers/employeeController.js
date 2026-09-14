@@ -1,6 +1,7 @@
 import EmployeeService from "../services/employeeService.js";
 import responseHandler from "../utils/responseHandler.js";
 import XLSX from "xlsx";
+import AiRecommendationService from "../services/aiRecommendationService.js";
 
 class EmployeeController {
 
@@ -175,6 +176,25 @@ class EmployeeController {
                 error.message,
                 400
             );
+        }
+    }
+
+    async getAiRecommendation(req, res) {
+        try {
+            const employeeId = Number(req.params.employeeId);
+            const employee = EmployeeService.getEmployeeById(employeeId);
+            if (!employee) {
+                return responseHandler.error(res, "Employee not found", 404);
+            }
+
+            const criteria = req.body?.criteria || (req.query.criteria ? JSON.parse(req.query.criteria) : undefined);
+            const candidates = EmployeeService.getAvailableLMs(employeeId, criteria || {});
+            const recommendation = await AiRecommendationService.recommendLineManager(employee, candidates, criteria);
+            return responseHandler.success(res, recommendation, "AI Line Manager recommendation generated");
+        }
+        catch (error) {
+            console.error(error);
+            return responseHandler.error(res, error.message || "Failed to generate AI recommendation", 400);
         }
     }
 

@@ -1,26 +1,22 @@
 import { useEffect, useState } from "react";
 import EmployeeService from "../services/employeeService";
 import AssignmentService from "../services/assignmentService";
-import AssignLMModal from "./AssignLMModal";
 import ViewLMModal from "./ViewLMModal";
-import AddEmployeeModal from "./AddEmployeeModal";
 import EditEmployeeModal from "./EditEmployeeModal";
-import ExcelPreviewModal from "./ExcelPreviewModal";
-import * as XLSX from "xlsx";
 
 function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     const [employees, setEmployees] = useState([]);
     const [assignments, setAssignments] = useState({});
-    const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [pendingRequests, setPendingRequests] = useState({});
     const [loading, setLoading] = useState(true);
     const [viewEmployee, setViewEmployee] = useState(null);
     const [error, setError] = useState("");
-    const [showAddEmployee, setShowAddEmployee] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [assigneeView, setAssigneeView] = useState(null);
-    const [importing, setImporting] = useState(false);
-    const [previewRows, setPreviewRows] = useState(null);
     const [openActionMenu, setOpenActionMenu] = useState(null);
+    const [selectedDepartment, setSelectedDepartment] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const employeesPerPage = 10;
 
     const fetchData = async () => {
         try {
@@ -38,6 +34,9 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                 assignmentMap[employeeId] = assignment;
             });
             setAssignments(assignmentMap);
+
+            const pending = await AssignmentService.getPendingAssignments();
+            setPendingRequests(Object.fromEntries(pending.map((request) => [request.assignedEmpId, request])));
         }
         catch (error) {
             console.error(error);
@@ -50,6 +49,24 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     useEffect(() => {
         fetchData();
     }, [refreshKey]);
+
+    const departments = [...new Set(employees.map((employee) => employee.department).filter(Boolean))].sort();
+    const filteredEmployees = selectedDepartment === "all"
+        ? employees
+        : employees.filter((employee) => employee.department === selectedDepartment);
+    const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / employeesPerPage));
+    const pageStart = (currentPage - 1) * employeesPerPage;
+    const visibleEmployees = filteredEmployees.slice(pageStart, pageStart + employeesPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedDepartment]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     const handleSeeAssignees = async (employee) => {
         const isLineManager = criteria.allowedDesignations.includes(employee.designation);
@@ -82,76 +99,29 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
         setEditingEmployee(employee);
     };
 
-    const handleImportEmployees = async (event) => {
-        const file = event.target.files?.[0];
-        event.target.value = "";
-        if (!file) return;
-
+    const handleRequestLM = async (employee) => {
         try {
-            setImporting(true);
-            const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const spreadsheetRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-            const normalizedRows = spreadsheetRows.map((row, index) => ({
-                id: row.id || row.ID || Date.now() + index,
-                name: row.name || row.Name || "",
-                designation: row.designation || row.Designation || "",
-                experience: row.experience ?? row.Experience ?? "",
-                department: row.department || row.Department || "",
-                skills: String(row.skills || row.Skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
-                _rowId: `${Date.now()}-${index}`
-            }));
-
-            if (!normalizedRows.length) {
-                throw new Error("The Excel file does not contain any employee rows");
-            }
-            setPreviewRows(normalizedRows);
+            await AssignmentService.createAssignment(employee.id, null, criteria);
+            await fetchData();
+            onRequestRefresh?.();
         }
-        catch (importError) {
-            console.error(importError);
-            setError(importError.response?.data?.message || importError.message || "Failed to preview employees");
-        }
-        finally {
-            setImporting(false);
+        catch (requestError) {
+            setError(requestError.response?.data?.message || "Failed to create LM request");
         }
     };
 
-    const addPreviewEmployee = async (employee) => {
-        try {
-            setImporting(true);
-            const { _rowId, ...payload } = employee;
-            await EmployeeService.createEmployee(payload);
-            await fetchData();
-            onRequestRefresh?.();
-            return true;
-        }
-        catch (addError) {
-            console.error(addError);
-            setError(addError.response?.data?.message || "Failed to add employee");
-            return false;
-        }
-        finally {
-            setImporting(false);
-        }
-    };
+    const handleUndoRequest = async (employee) => {
+        const request = pendingRequests[employee.id];
+        if (!request) return;
+        if (!window.confirm(`Undo the LM request for ${employee.name}?`)) return;
 
-    const addAllPreviewEmployees = async (employeesToAdd) => {
         try {
-            setImporting(true);
-            const payload = employeesToAdd.map(({ _rowId, ...employee }) => employee);
-            await EmployeeService.createEmployees(payload);
+            await AssignmentService.cancelPendingAssignment(request.assignmentId);
             await fetchData();
             onRequestRefresh?.();
-            setPreviewRows(null);
-            return true;
         }
-        catch (addError) {
-            console.error(addError);
-            setError(addError.response?.data?.message || "Failed to add employees");
-            return false;
-        }
-        finally {
-            setImporting(false);
+        catch (cancelError) {
+            setError(cancelError.response?.data?.message || "Failed to undo LM request");
         }
     };
 
@@ -184,40 +154,30 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
             <div className="section-header">
                 <div>
                     <h2>Employees</h2>
-                    <button
-                        className="primary-btn"
-                        onClick={() => setShowAddEmployee(true)}
+                    <select
+                        className="department-filter"
+                        value={selectedDepartment}
+                        onChange={(event) => {
+                            setSelectedDepartment(event.target.value);
+                            setCurrentPage(1);
+                        }}
+                        aria-label="Filter employees by department"
                     >
-                        + Add Employee
-                    </button>
-                    <label className="secondary-btn import-btn">
-                        {importing ? "Importing..." : "Import Excel"}
-                        <input type="file" accept=".xlsx,.xls" onChange={handleImportEmployees} disabled={importing} />
-                    </label>
+                        <option value="all">All departments</option>
+                        {departments.map((department) => (
+                            <option key={department} value={department}>{department}</option>
+                        ))}
+                    </select>
                 </div>
-                <span className="counter-pill">{employees.length} total</span>
+                <span className="counter-pill">
+                    {selectedDepartment === "all" ? employees.length : `${filteredEmployees.length} / ${employees.length}`} total
+                </span>
             </div>
 
-            {showAddEmployee && (
-                <AddEmployeeModal
-                    onClose={() => setShowAddEmployee(false)}
-                    onAdded={() => fetchData()}
-                />
-            )}
-
-            {previewRows && (
-                <ExcelPreviewModal
-                    rows={previewRows}
-                    saving={importing}
-                    onClose={() => setPreviewRows(null)}
-                    onAdd={addPreviewEmployee}
-                    onAddAll={addAllPreviewEmployees}
-                />
-            )}
-
             <div className="employee-list">
-                {employees.map((employee) => {
+                {visibleEmployees.map((employee) => {
                     const assignment = assignments[employee.id];
+                    const pendingRequest = pendingRequests[employee.id];
                     const isLineManager = criteria.allowedDesignations.includes(employee.designation);
 
                     let skills = "";
@@ -239,8 +199,8 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                     <p className="mini-label">Employee</p>
                                     <h3>{employee.name}</h3>
                                 </div>
-                                <span className={`status-badge ${assignment ? "assigned" : "open"}`}>
-                                    {assignment ? "Assigned" : "Open"}
+                                <span className={`status-badge ${assignment ? "assigned" : pendingRequest ? "pending" : "open"}`}>
+                                    {assignment ? "Assigned" : pendingRequest ? "Requested" : "Open"}
                                 </span>
                             </div>
 
@@ -286,9 +246,13 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                                 <button type="button" className="action-menu-item" onClick={() => { setViewEmployee(employee); setOpenActionMenu(null); }}>
                                                     View LM
                                                 </button>
+                                            ) : pendingRequest ? (
+                                                <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleUndoRequest(employee); setOpenActionMenu(null); }}>
+                                                    Undo request
+                                                </button>
                                             ) : (
-                                                <button type="button" className="action-menu-item action-menu-primary" onClick={() => { setSelectedEmployee(employee); setOpenActionMenu(null); }}>
-                                                    Add LM
+                                                <button type="button" className="action-menu-item action-menu-primary" onClick={() => { handleRequestLM(employee); setOpenActionMenu(null); }}>
+                                                    Request LM
                                                 </button>
                                             )}
                                             <button type="button" className="action-menu-item" onClick={() => { handleEditEmployee(employee); setOpenActionMenu(null); }}>
@@ -310,6 +274,34 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                     );
                 })}
             </div>
+
+            {filteredEmployees.length > employeesPerPage && (
+                <div className="pagination-controls" aria-label="Employee pagination">
+                    <button
+                        type="button"
+                        className="secondary-btn small-btn"
+                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                        disabled={currentPage === 1}
+                    >
+                        Previous
+                    </button>
+                    <span>Page {currentPage} of {totalPages}</span>
+                    <button
+                        type="button"
+                        className="secondary-btn small-btn"
+                        onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                        disabled={currentPage === totalPages}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
+
+            {filteredEmployees.length === 0 && (
+                <div className="empty-state employee-filter-empty">
+                    <p>No employees found in this department.</p>
+                </div>
+            )}
 
             {editingEmployee && (
                 <EditEmployeeModal
@@ -360,19 +352,6 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                         </div>
                     </div>
                 </div>
-            )}
-
-            {selectedEmployee && (
-                <AssignLMModal
-                    employee={selectedEmployee}
-                    criteria={criteria}
-                    onClose={() => setSelectedEmployee(null)}
-                    onAssigned={() => {
-                        setSelectedEmployee(null);
-                        fetchData();
-                        onRequestRefresh?.();
-                    }}
-                />
             )}
 
             {viewEmployee && (

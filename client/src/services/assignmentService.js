@@ -41,6 +41,11 @@ class AssignmentService {
         return response.data.data;
     }
 
+    async cancelPendingAssignment(assignmentId) {
+        const response = await axios.patch(`${API_URL}/${assignmentId}/cancel`);
+        return response.data.data;
+    }
+
     async confirmAllAssignments(criteria) {
         const response = await axios.patch(`${API_URL}/bulk-confirm`, { criteria });
         return response.data.data;

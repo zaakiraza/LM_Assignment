@@ -8,13 +8,23 @@ function AssignLMModal({ employee, currentAssignment, criteria, onClose, onAssig
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [recommendationReason, setRecommendationReason] = useState("");
 
     useEffect(() => {
         const fetchLineManagers = async () => {
             try {
-                const data = await EmployeeService.getAvailableLMs(employee.id, criteria);
-                const filteredLMs = data.filter((lm) => lm.id !== currentAssignment?.lineManagerId);
-                setLineManagers(filteredLMs);
+                if (criteria.recommendationMode === "ai") {
+                    const recommendation = await EmployeeService.getAiRecommendation(employee.id, criteria);
+                    setLineManagers([recommendation]);
+                    setSelectedLM(String(recommendation.id));
+                    setRecommendationReason(recommendation.recommendationReason);
+                }
+                else {
+                    const data = await EmployeeService.getAvailableLMs(employee.id, criteria);
+                    const filteredLMs = data.filter((lm) => lm.id !== currentAssignment?.lineManagerId);
+                    setLineManagers(filteredLMs);
+                    setRecommendationReason("");
+                }
             }
             catch (error) {
                 console.error(error);
@@ -25,7 +35,7 @@ function AssignLMModal({ employee, currentAssignment, criteria, onClose, onAssig
             }
         };
         fetchLineManagers();
-    }, [employee.id, currentAssignment]);
+    }, [employee.id, currentAssignment, criteria]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -74,6 +84,11 @@ function AssignLMModal({ employee, currentAssignment, criteria, onClose, onAssig
                 ) : (
                     <form onSubmit={handleSubmit} className="modal-form">
                         <label className="field-label">Recommended Line Managers</label>
+                        {criteria.recommendationMode === "ai" && (
+                            <p className="modal-message ai-note">
+                                Gemini AI recommendation: {recommendationReason}
+                            </p>
+                        )}
                         <select value={selectedLM} onChange={(event) => setSelectedLM(event.target.value)}>
                             <option value="">Select LM</option>
                             {lineManagers.map((lm) => (

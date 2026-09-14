@@ -37,24 +37,17 @@ function AssignmentModal({
             try {
 
                 const data =
-                    await EmployeeService
-                        .getAvailableLMs(
-                            assignment.assignedEmpId,
-                            criteria
-                        );
+                    criteria.recommendationMode === "ai"
+                        ? await EmployeeService.getAiRecommendation(assignment.assignedEmpId, criteria).then((recommendation) => [recommendation])
+                        : await EmployeeService.getAvailableLMs(assignment.assignedEmpId, criteria);
 
                 setLineManagers(data);
-
-
-                /*
-                 * Pre-select the originally
-                 * requested LM.
-                 */
-                setSelectedLM(
-                    String(
-                        assignment.lineManagerId
-                    )
-                );
+                if (criteria.recommendationMode === "ai") {
+                    setSelectedLM(String(data[0]?.id || ""));
+                }
+                else {
+                    setSelectedLM(assignment.lineManagerId ? String(assignment.lineManagerId) : "");
+                }
 
             }
             catch (error) {
@@ -77,7 +70,8 @@ function AssignmentModal({
 
     }, [
         assignment.assignedEmpId,
-        assignment.lineManagerId
+        assignment.lineManagerId,
+        criteria
     ]);
 
 

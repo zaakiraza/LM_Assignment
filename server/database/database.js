@@ -26,7 +26,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS assignments (
         assignmentId INTEGER PRIMARY KEY AUTOINCREMENT,
         assignedEmpId INTEGER NOT NULL,
-        lineManagerId INTEGER NOT NULL,
+        lineManagerId INTEGER,
         isConfirm INTEGER DEFAULT 0,
         isActive INTEGER DEFAULT 0,
         FOREIGN KEY (assignedEmpId)
@@ -36,5 +36,29 @@ db.exec(`
 
     )
 `);
+
+const assignmentColumns = db.prepare(`PRAGMA table_info(assignments)`).all();
+const lineManagerColumn = assignmentColumns.find((column) => column.name === "lineManagerId");
+
+if (lineManagerColumn?.notnull === 1) {
+    db.transaction(() => {
+        db.exec(`
+            ALTER TABLE assignments RENAME TO assignments_legacy;
+            CREATE TABLE assignments (
+                assignmentId INTEGER PRIMARY KEY AUTOINCREMENT,
+                assignedEmpId INTEGER NOT NULL,
+                lineManagerId INTEGER,
+                isConfirm INTEGER DEFAULT 0,
+                isActive INTEGER DEFAULT 0,
+                FOREIGN KEY (assignedEmpId) REFERENCES employees(id),
+                FOREIGN KEY (lineManagerId) REFERENCES employees(id)
+            );
+            INSERT INTO assignments (assignmentId, assignedEmpId, lineManagerId, isConfirm, isActive)
+            SELECT assignmentId, assignedEmpId, lineManagerId, isConfirm, isActive
+            FROM assignments_legacy;
+            DROP TABLE assignments_legacy;
+        `);
+    })();
+}
 
 export default db;

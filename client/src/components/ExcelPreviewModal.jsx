@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving }) {
+function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving, inline = false }) {
     const [pendingRows, setPendingRows] = useState(rows);
 
     const handleAdd = async (row) => {
@@ -18,14 +18,14 @@ function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving }) {
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal request-modal excel-preview-modal">
+        <div className={inline ? "excel-preview-inline" : "modal-overlay"}>
+            <div className={inline ? "excel-preview-panel" : "modal request-modal excel-preview-modal"}>
                 <div className="modal-head">
                     <div>
                         <p className="eyebrow">Import preview</p>
                         <h2>Review employees</h2>
                     </div>
-                    <button type="button" className="icon-close" onClick={onClose} disabled={saving}>×</button>
+                    {!inline && <button type="button" className="icon-close" onClick={onClose} disabled={saving}>×</button>}
                 </div>
 
                 {pendingRows.length === 0 ? (
