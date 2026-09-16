@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// const API_URL = "https://lm-assignment.vercel.app/api/assignments";
-const API_URL = "http://localhost:5000/api/assignments"
+const API_URL = "https://lm-assignment.vercel.app/api/assignments";
+// const API_URL = "http://localhost:5000/api/assignments"
 
 class AssignmentService {
 
