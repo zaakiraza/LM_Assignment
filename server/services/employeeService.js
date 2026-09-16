@@ -177,16 +177,33 @@ class EmployeeService {
             AND designation IN (${designationPlaceholders})
             AND employeeManaged < ?
             AND id != ?
-            ORDER BY
-                employeeManaged ASC,
-                CASE
-                    WHEN designation = 'Software Architect'
-                    THEN 0
-                    ELSE 1
-                END ASC,
-                id ASC
+            ORDER BY employeeManaged ASC, id ASC
         `).all(...queryParameters);
-        return lineManagers;
+
+        const designationPriority = Array.isArray(criteria.designationPriority) && criteria.designationPriority.length
+            ? criteria.designationPriority
+            : allowedDesignations;
+        const employeeRank = designationPriority.indexOf(employee.designation);
+
+        return lineManagers
+            .filter((lineManager) => {
+                const lineManagerRank = designationPriority.indexOf(lineManager.designation);
+                return employeeRank === -1 || lineManagerRank < employeeRank || (
+                    lineManagerRank === employeeRank && lineManager.experience > employee.experience
+                );
+            })
+            .sort((left, right) => {
+                const leftRank = designationPriority.indexOf(left.designation);
+                const rightRank = designationPriority.indexOf(right.designation);
+                const leftIsHigher = leftRank < employeeRank;
+                const rightIsHigher = rightRank < employeeRank;
+
+                if (leftIsHigher !== rightIsHigher) return leftIsHigher ? -1 : 1;
+                if (leftRank !== rightRank) return leftRank - rightRank;
+                if (right.experience !== left.experience) return right.experience - left.experience;
+                if (left.employeeManaged !== right.employeeManaged) return left.employeeManaged - right.employeeManaged;
+                return left.id - right.id;
+            });
     }
 
     getAssignedEmployeesForManager(lineManagerId) {

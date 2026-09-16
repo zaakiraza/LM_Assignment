@@ -15,6 +15,7 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     const [assigneeView, setAssigneeView] = useState(null);
     const [openActionMenu, setOpenActionMenu] = useState(null);
     const [selectedDepartment, setSelectedDepartment] = useState("all");
+    const [selectedDesignation, setSelectedDesignation] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const employeesPerPage = 10;
 
@@ -51,16 +52,18 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     }, [refreshKey]);
 
     const departments = [...new Set(employees.map((employee) => employee.department).filter(Boolean))].sort();
-    const filteredEmployees = selectedDepartment === "all"
-        ? employees
-        : employees.filter((employee) => employee.department === selectedDepartment);
+    const designations = [...new Set(employees.map((employee) => employee.designation).filter(Boolean))].sort();
+    const filteredEmployees = employees.filter((employee) => (
+        (selectedDepartment === "all" || employee.department === selectedDepartment) &&
+        (selectedDesignation === "all" || employee.designation === selectedDesignation)
+    ));
     const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / employeesPerPage));
     const pageStart = (currentPage - 1) * employeesPerPage;
     const visibleEmployees = filteredEmployees.slice(pageStart, pageStart + employeesPerPage);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedDepartment]);
+    }, [selectedDepartment, selectedDesignation]);
 
     useEffect(() => {
         if (currentPage > totalPages) {
@@ -168,9 +171,25 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                             <option key={department} value={department}>{department}</option>
                         ))}
                     </select>
+                    <select
+                        className="department-filter"
+                        value={selectedDesignation}
+                        onChange={(event) => {
+                            setSelectedDesignation(event.target.value);
+                            setCurrentPage(1);
+                        }}
+                        aria-label="Filter employees by designation"
+                    >
+                        <option value="all">All designations</option>
+                        {designations.map((designation) => (
+                            <option key={designation} value={designation}>{designation}</option>
+                        ))}
+                    </select>
                 </div>
                 <span className="counter-pill">
-                    {selectedDepartment === "all" ? employees.length : `${filteredEmployees.length} / ${employees.length}`} total
+                    {filteredEmployees.length === employees.length
+                        ? `${employees.length} total`
+                        : `${filteredEmployees.length} / ${employees.length} total`}
                 </span>
             </div>
 

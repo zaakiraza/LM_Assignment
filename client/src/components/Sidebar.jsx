@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 
 const links = [
-    { to: "/employees", label: "Employees", shortLabel: "E" },
     { to: "/add-employee", label: "Import Employees", shortLabel: "I" },
+    { to: "/employees", label: "Employees", shortLabel: "E" },
     { to: "/requests", label: "Requests", shortLabel: "R" },
     { to: "/settings", label: "Settings", shortLabel: "S" }
 ];

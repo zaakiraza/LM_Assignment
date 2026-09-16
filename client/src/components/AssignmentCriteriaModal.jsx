@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 
 const availableDesignations = [
     "Software Architect",
-    "Lead Software Engineer"
+    "Lead Software Engineer",
+    "Senior Software Engineer",
+    "Software Engineer"
 ];
 
 function AssignmentCriteriaModal({ criteria, onClose, onSave, inline = false }) {

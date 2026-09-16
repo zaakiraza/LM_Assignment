@@ -65,12 +65,17 @@ Backend:
 - The default eligible line manager designations are:
   - Software Architect
   - Lead Software Engineer
+  - Senior Software Engineer
+  - Software Engineer
+- Designation priority is Software Architect, Lead Software Engineer, Senior Software Engineer, then Software Engineer.
+- Recommendation prefers a higher designation than the employee. If no higher designation is available, it may choose the same designation only when that LM has more experience.
 - Employee cannot be their own line manager.
 - The default rule requires the line manager and employee to belong to the same department.
 
 Assignment criteria are edited from the `Assignment settings` button in the UI and kept in `App` state. The default values are defined in `client/src/config/assignmentCriteria.js`; the active `maxManagedEmployees`, `allowedDesignations`, and `requireSameDepartment` values are sent with recommendation and assignment API calls.
 - The manager capacity, eligible designations, and department rule are runtime criteria configured from the UI. The default maximum is 4, but it can be changed without editing backend code.
 - The employee roster has a department filter with an `All departments` option. Filtering is client-side after the employee list is loaded and does not change assignment data.
+- The employee roster also has a designation filter with an `All designations` option. Department and designation filters can be combined.
 - The employee roster displays 10 employees per page. Pagination applies after department filtering and resets to page 1 when the department changes.
 - The `Recommendation method` setting lets the user choose deterministic criteria recommendations or Gemini AI recommendations.
 - AI recommendations are generated on the backend using Google ADK (`@google/adk`) and `GEMINI_API_KEY` from the server environment. AI can choose only from candidates that already pass department, designation, and capacity constraints.

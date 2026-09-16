@@ -27,6 +27,9 @@ class AiRecommendationService {
         const prompt = `
             You recommend a line manager for one employee. Choose exactly one candidate from the supplied list.
             Candidates already pass department, designation, and capacity constraints. Use skills first, then experience, then current load.
+            Designation priority from highest to lowest is: Software Architect, Lead Software Engineer, Senior Software Engineer, Software Engineer.
+            Prefer a candidate with a higher designation than the employee. If no higher designation is available, choose the same designation only when the candidate has more experience.
+            Never choose a lower designation or a same-designation candidate with equal or less experience.
             Criteria: ${JSON.stringify(criteria)}
             Employee: ${JSON.stringify(employee)}
             Candidates: ${JSON.stringify(candidates)}

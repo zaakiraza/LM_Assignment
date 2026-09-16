@@ -47,6 +47,9 @@ class AssignmentService {
             : [];
         const maxManagedEmployees = Number(criteria.maxManagedEmployees);
         const requireSameDepartment = criteria.requireSameDepartment !== false;
+        const designationPriority = Array.isArray(criteria.designationPriority) && criteria.designationPriority.length
+            ? criteria.designationPriority
+            : allowedDesignations;
 
         if (!allowedDesignations.length || !Number.isFinite(maxManagedEmployees)) {
             throw new Error("Valid assignment criteria are required");
@@ -54,6 +57,15 @@ class AssignmentService {
 
         if (!allowedDesignations.includes(lineManager.designation)) {
             throw new Error("Selected employee cannot be a Line Manager");
+        }
+
+        const employeeRank = designationPriority.indexOf(employee.designation);
+        const lineManagerRank = designationPriority.indexOf(lineManager.designation);
+        const validHierarchy = employeeRank === -1 || lineManagerRank < employeeRank || (
+            lineManagerRank === employeeRank && lineManager.experience > employee.experience
+        );
+        if (!validHierarchy) {
+            throw new Error("Line Manager must have a higher designation or more experience at the same designation");
         }
 
         // 5. Check same department
