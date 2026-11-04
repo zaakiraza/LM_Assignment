@@ -5,6 +5,8 @@ import assignmentRoutes from "./routes/assignmentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import meetingRoutes from "./routes/meetingRoutes.js";
 
 const app = express();
 
@@ -26,5 +28,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/employees", employeeRoutes);
 app.use("/api/assignments", assignmentRoutes);
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/meetings", meetingRoutes);
 
 export default app;

@@ -72,7 +72,7 @@ function AddEmployees({ onChanged, onClose, onExcelReady, asModal = false }) {
                     <p className="mini-label">Option 02</p>
                     <h3>Bulk import</h3>
                     <p>Validated rows open in the main employees table so you can add them one by one or all at once.</p>
-                    <label className={`secondary-btn import-btn intake-upload${parsing ? " disabled" : ""}`}>
+                    <label className={`primary-btn import-btn intake-upload${parsing ? " disabled" : ""}`}>
                         {parsing ? "Reading file..." : "Choose Excel file"}
                         <input type="file" accept=".xlsx,.xls" onChange={handleExcel} disabled={parsing} />
                     </label>

@@ -51,7 +51,7 @@ function AddEmployeeModal({ onClose, onAdded }) {
 
     return (
         <div className="modal-overlay">
-            <div className="modal">
+            <div className="modal add-employee-modal">
                 <div className="modal-head">
                     <div>
                         <p className="eyebrow">Employee</p>
@@ -83,73 +83,85 @@ function AddEmployeeModal({ onClose, onAdded }) {
                         };
 
                         return (
-                            <Form className="modal-form">
-                                <label>Name</label>
-                                <Field name="name" type="text" placeholder="Enter name" className="modal-input" />
-                                <ErrorMessage name="name" component="p" className="modal-message error" />
+                            <Form className="modal-form modal-form-grid">
+                                <div className="form-field">
+                                    <label>Name</label>
+                                    <Field name="name" type="text" placeholder="Enter name" className="modal-input" />
+                                    <ErrorMessage name="name" component="p" className="modal-message error" />
+                                </div>
 
-                                <label>Email</label>
-                                <Field name="email" type="email" placeholder="name@company.com" className="modal-input" />
-                                <ErrorMessage name="email" component="p" className="modal-message error" />
+                                <div className="form-field">
+                                    <label>Email</label>
+                                    <Field name="email" type="email" placeholder="name@company.com" className="modal-input" />
+                                    <ErrorMessage name="email" component="p" className="modal-message error" />
+                                </div>
 
-                                <label>Position</label>
-                                <Field as="select" name="position" className="modal-input">
-                                    <option value="">Select position</option>
-                                    {POSITIONS.map((position) => (
-                                        <option key={position} value={position}>{position}</option>
-                                    ))}
-                                </Field>
-                                <ErrorMessage name="position" component="p" className="modal-message error" />
-
-                                <label>Experience</label>
-                                <Field name="experience" type="number" min="0" placeholder="Years" className="modal-input" />
-                                <ErrorMessage name="experience" component="p" className="modal-message error" />
-
-                                <label>Department</label>
-                                <Field as="select" name="department" className="modal-input">
-                                    <option value="">Select department</option>
-                                    <option value="netSuite">netSuite</option>
-                                    <option value="App dev">App dev</option>
-                                    <option value="IT">IT</option>
-                                    <option value="HR">HR</option>
-                                </Field>
-                                <ErrorMessage name="department" component="p" className="modal-message error" />
-
-                                <label>Skills</label>
-                                {values.skills.length > 0 && (
-                                    <div className="skill-tags">
-                                        {values.skills.map((skill) => (
-                                            <span key={skill} className="skill-tag">
-                                                {skill}
-                                                <button
-                                                    type="button"
-                                                    className="skill-tag-remove"
-                                                    aria-label={`Remove ${skill}`}
-                                                    onClick={() => removeSkill(skill)}
-                                                >
-                                                    ×
-                                                </button>
-                                            </span>
+                                <div className="form-field">
+                                    <label>Position</label>
+                                    <Field as="select" name="position" className="modal-input">
+                                        <option value="">Select position</option>
+                                        {POSITIONS.map((position) => (
+                                            <option key={position} value={position}>{position}</option>
                                         ))}
-                                    </div>
-                                )}
-                                <Field
-                                    name="skillDraft"
-                                    type="text"
-                                    className="modal-input"
-                                    placeholder="Type a skill and press Enter"
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter") {
-                                            event.preventDefault();
-                                            addSkill();
-                                        }
-                                    }}
-                                />
-                                <ErrorMessage name="skills" component="p" className="modal-message error" />
+                                    </Field>
+                                    <ErrorMessage name="position" component="p" className="modal-message error" />
+                                </div>
 
-                                {status && <p className="modal-message error">{status}</p>}
+                                <div className="form-field">
+                                    <label>Experience</label>
+                                    <Field name="experience" type="number" min="0" placeholder="Years" className="modal-input" />
+                                    <ErrorMessage name="experience" component="p" className="modal-message error" />
+                                </div>
 
-                                <div className="modal-actions">
+                                <div className="form-field">
+                                    <label>Department</label>
+                                    <Field as="select" name="department" className="modal-input">
+                                        <option value="">Select department</option>
+                                        <option value="netSuite">netSuite</option>
+                                        <option value="App dev">App dev</option>
+                                        <option value="IT">IT</option>
+                                        <option value="HR">HR</option>
+                                    </Field>
+                                    <ErrorMessage name="department" component="p" className="modal-message error" />
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Skills</label>
+                                    {values.skills.length > 0 && (
+                                        <div className="skill-tags">
+                                            {values.skills.map((skill) => (
+                                                <span key={skill} className="skill-tag">
+                                                    {skill}
+                                                    <button
+                                                        type="button"
+                                                        className="skill-tag-remove"
+                                                        aria-label={`Remove ${skill}`}
+                                                        onClick={() => removeSkill(skill)}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <Field
+                                        name="skillDraft"
+                                        type="text"
+                                        className="modal-input"
+                                        placeholder="Type a skill and press Enter"
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter") {
+                                                event.preventDefault();
+                                                addSkill();
+                                            }
+                                        }}
+                                    />
+                                    <ErrorMessage name="skills" component="p" className="modal-message error" />
+                                </div>
+
+                                {status && <p className="modal-message error form-span-2">{status}</p>}
+
+                                <div className="modal-actions form-span-2">
                                     <button type="button" className="secondary-btn" onClick={onClose}>Cancel</button>
                                     <button type="submit" className="primary-btn" disabled={isSubmitting}>
                                         {isSubmitting ? "Adding..." : "Add Employee"}

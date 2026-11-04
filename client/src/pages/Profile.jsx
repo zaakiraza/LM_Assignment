@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import EmployeeService from "../services/employeeService";
 import AssignmentService from "../services/assignmentService";
+import LoadingSpinner from "../components/LoadingSpinner";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 function Profile() {
     const auth = useAuth();
+    const toast = useToast();
     const [employee, setEmployee] = useState(null);
     const [assignment, setAssignment] = useState(null);
     const [pendingRequest, setPendingRequest] = useState(null);
@@ -38,18 +41,29 @@ function Profile() {
         load();
     }, []);
 
-    const handleRequestLM = async () => {
+    const handleRequestLM = async ({ isChange = false } = {}) => {
         if (!employee) return;
+        const confirmText = isChange
+            ? "Request a change of line manager? HR will review it on the Requests page."
+            : "Request a line manager assignment?";
+        if (!window.confirm(confirmText)) return;
+
         try {
             setActing(true);
             setError("");
             setMessage("");
             await AssignmentService.createAssignment(employee.id, null);
-            setMessage("LM request sent. HR can see it on the Requests page.");
+            const successText = isChange
+                ? "Change LM request sent. HR can see it on the Requests page."
+                : "LM request sent. HR can see it on the Requests page.";
+            setMessage(successText);
+            toast.success(successText);
             await load();
         }
         catch (requestError) {
-            setError(requestError.response?.data?.message || "Failed to create LM request");
+            const text = requestError.response?.data?.message || "Failed to create LM request";
+            setError(text);
+            toast.error(text);
         }
         finally {
             setActing(false);
@@ -65,17 +79,20 @@ function Profile() {
             setMessage("");
             await AssignmentService.cancelPendingAssignment(pendingRequest.assignmentId);
             setMessage("LM request cancelled.");
+            toast.success("LM request cancelled");
             await load();
         }
         catch (cancelError) {
-            setError(cancelError.response?.data?.message || "Failed to cancel LM request");
+            const text = cancelError.response?.data?.message || "Failed to cancel LM request";
+            setError(text);
+            toast.error(text);
         }
         finally {
             setActing(false);
         }
     };
 
-    if (loading) return <div className="panel-state"><h2>Loading profile...</h2></div>;
+    if (loading) return <LoadingSpinner label="Loading profile..." />;
     if (error && !employee) return <div className="panel-state error"><h2>{error}</h2></div>;
     if (!employee) return null;
 
@@ -118,9 +135,64 @@ function Profile() {
             <div className="profile-assignment">
                 <h3>Line manager</h3>
                 {assignment ? (
-                    <div className="detail-row">
-                        <span>{assignment.lineManagerName}</span>
-                        <strong>{assignment.lineManagerDesignation}</strong>
+                    <div className="profile-request-state">
+                        <article className="employee-card profile-lm-card">
+                            <div className="employee-grid">
+                                <div>
+                                    <span className="meta-label">Name</span>
+                                    <strong>{assignment.lineManagerName || "—"}</strong>
+                                </div>
+                                <div>
+                                    <span className="meta-label">Position</span>
+                                    <strong>{assignment.lineManagerDesignation || "—"}</strong>
+                                </div>
+                                <div>
+                                    <span className="meta-label">Experience</span>
+                                    <strong>{assignment.lineManagerExperience ?? 0} yrs</strong>
+                                </div>
+                                <div>
+                                    <span className="meta-label">Department</span>
+                                    <strong>{assignment.lineManagerDepartment || "—"}</strong>
+                                </div>
+                                <div>
+                                    <span className="meta-label">Managed</span>
+                                    <strong>{assignment.lineManagerEmployeeManaged ?? 0}</strong>
+                                </div>
+                            </div>
+                            <div className="skills-box">
+                                <span className="meta-label">Skills</span>
+                                <p>
+                                    {Array.isArray(assignment.lineManagerSkills)
+                                        ? assignment.lineManagerSkills.join(", ")
+                                        : (assignment.lineManagerSkills || "—")}
+                                </p>
+                            </div>
+                        </article>
+
+                        {pendingRequest ? (
+                            <>
+                                <p className="modal-message warning">
+                                    Change LM request pending. Waiting for HR to assign a new line manager.
+                                </p>
+                                <button
+                                    type="button"
+                                    className="secondary-btn"
+                                    disabled={acting}
+                                    onClick={handleUndoRequest}
+                                >
+                                    {acting ? "Cancelling..." : "Undo change request"}
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                className="primary-btn"
+                                disabled={acting}
+                                onClick={() => handleRequestLM({ isChange: true })}
+                            >
+                                {acting ? "Requesting..." : "Change LM"}
+                            </button>
+                        )}
                     </div>
                 ) : pendingRequest ? (
                     <div className="profile-request-state">
@@ -143,7 +215,7 @@ function Profile() {
                             type="button"
                             className="primary-btn"
                             disabled={acting}
-                            onClick={handleRequestLM}
+                            onClick={() => handleRequestLM({ isChange: false })}
                         >
                             {acting ? "Requesting..." : "Request LM"}
                         </button>

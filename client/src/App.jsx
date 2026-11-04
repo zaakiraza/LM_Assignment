@@ -10,6 +10,9 @@ import PendingApproval from "./pages/PendingApproval";
 import Profile from "./pages/Profile";
 import Assignees from "./pages/Assignees";
 import PendingUsers from "./pages/PendingUsers";
+import LMMeetings from "./pages/LMMeetings";
+import LMFeedback from "./pages/LMFeedback";
+import AppFeedback from "./pages/AppFeedback";
 import FloatingHRChat from "./components/FloatingHRChat";
 import { defaultAssignmentCriteria } from "./config/assignmentCriteria";
 import SettingsService from "./services/settingsService";
@@ -86,6 +89,15 @@ function AppRoutes() {
                     } />
                     <Route path="/pending-users" element={
                         <ProtectedRoute requireHR><PendingUsers /></ProtectedRoute>
+                    } />
+                    <Route path="/lm-meetings" element={
+                        <ProtectedRoute><LMMeetings /></ProtectedRoute>
+                    } />
+                    <Route path="/lm-feedback" element={
+                        <ProtectedRoute><LMFeedback /></ProtectedRoute>
+                    } />
+                    <Route path="/app-feedback" element={
+                        <ProtectedRoute><AppFeedback /></ProtectedRoute>
                     } />
 
                     <Route path="*" element={

@@ -266,10 +266,18 @@ function EmployeeList({
     };
 
     const handleRequestLM = async (employee) => {
-        if (!window.confirm(`Create an LM request for ${employee.name}?`)) return;
+        const hasAssignment = Boolean(assignments[employee.id]);
+        const confirmText = hasAssignment
+            ? `Request a Change LM for ${employee.name}?`
+            : `Create an LM request for ${employee.name}?`;
+        if (!window.confirm(confirmText)) return;
         try {
             await AssignmentService.createAssignment(employee.id, null, criteria);
-            toast.success(`LM request created for ${employee.name}`);
+            toast.success(
+                hasAssignment
+                    ? `Change LM request created for ${employee.name}`
+                    : `LM request created for ${employee.name}`
+            );
             await fetchData();
             onRequestRefresh?.();
         }
@@ -690,8 +698,20 @@ function EmployeeList({
                                 const assignment = assignments[employee.id];
                                 const pendingRequest = pendingRequests[employee.id];
                                 const skills = getSkillsText(employee);
-                                const status = assignment ? "Assigned" : pendingRequest ? "Requested" : "Open";
-                                const statusClass = assignment ? "assigned" : pendingRequest ? "pending" : "open";
+                                const status = assignment && pendingRequest
+                                    ? "Change requested"
+                                    : assignment
+                                        ? "Assigned"
+                                        : pendingRequest
+                                            ? "Requested"
+                                            : "Open";
+                                const statusClass = assignment && pendingRequest
+                                    ? "pending"
+                                    : assignment
+                                        ? "assigned"
+                                        : pendingRequest
+                                            ? "pending"
+                                            : "open";
 
                                 return (
                                     <tr key={employee.id}>
@@ -767,17 +787,36 @@ function EmployeeList({
                         left: menuPosition.left
                     }}
                 >
-                    {openMenuAssignment ? (
+                    {openMenuAssignment && (
                         <button type="button" className="action-menu-item" onClick={() => { setViewEmployee(openMenuEmployee); closeActionMenu(); }}>
                             View LM
                         </button>
-                    ) : openMenuPending ? (
+                    )}
+                    {openMenuAssignment && !openMenuPending && (
+                        <button
+                            type="button"
+                            className="action-menu-item action-menu-primary"
+                            onClick={() => {
+                                handleRequestLM(openMenuEmployee);
+                                closeActionMenu();
+                            }}
+                        >
+                            Change LM
+                        </button>
+                    )}
+                    {!openMenuAssignment && openMenuPending && (
                         <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleUndoRequest(openMenuEmployee); closeActionMenu(); }}>
                             Undo request
                         </button>
-                    ) : (
+                    )}
+                    {!openMenuAssignment && !openMenuPending && (
                         <button type="button" className="action-menu-item action-menu-primary" onClick={() => { handleRequestLM(openMenuEmployee); closeActionMenu(); }}>
                             Request LM
+                        </button>
+                    )}
+                    {openMenuAssignment && openMenuPending && (
+                        <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleUndoRequest(openMenuEmployee); closeActionMenu(); }}>
+                            Undo change request
                         </button>
                     )}
                     <button type="button" className="action-menu-item" onClick={() => { handleEditEmployee(openMenuEmployee); closeActionMenu(); }}>

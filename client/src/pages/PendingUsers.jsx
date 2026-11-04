@@ -121,9 +121,11 @@ function PendingUsers() {
         <section className="panel panel-main">
             <p className="eyebrow">Access control</p>
             <div className="section-header">
-                <div>
+                <div className="section-heading-block">
                     <h2>Unverified employees</h2>
-                    <p>Complete profile details and verify Google sign-ins before they can use the app.</p>
+                    <p className="page-description">
+                        Complete profile details and verify Google sign-ins before they can use the app.
+                    </p>
                 </div>
                 <span className="counter-pill">{pending.length}</span>
             </div>

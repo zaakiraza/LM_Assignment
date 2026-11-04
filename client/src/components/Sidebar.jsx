@@ -33,6 +33,21 @@ const ICONS = {
             <path fill="currentColor" d="M8 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm8 1a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5ZM3.8 19.5C3.8 16.9 5.9 15 8 15s4.2 1.9 4.2 4.5V20H3.8v-.5Zm9.7-.5c.2-1.1.7-2 1.4-2.7.8-.7 1.9-1.3 3.1-1.3 2 0 3.2 1.1 3.2 3v.5h-7.7V19Z" />
         </svg>
     ),
+    meetings: (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M7 3a1 1 0 0 1 1 1v1h8V4a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1V4a1 1 0 0 1 1-1Zm12 8H5v8h14v-8ZM7 10h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z" />
+        </svg>
+    ),
+    lmFeedback: (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 3a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3.1 5.8L17 20l-3.2-1.3A7 7 0 1 1 12 3Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm-2.2 3.2 1.5 1.5 3.3-3.4 1.4 1.4-4.7 4.8-2.9-2.9 1.4-1.4Z" />
+        </svg>
+    ),
+    appFeedback: (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 3.2V16H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm2 3v2h12V7H6Zm0 4v2h8v-2H6Z" />
+        </svg>
+    ),
     logout: (
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M10 4a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V6H6v12h3v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5Zm4.3 4.3a1 1 0 0 1 1.4 0l3 3a1 1 0 0 1 0 1.4l-3 3a1 1 0 1 1-1.4-1.4L15.58 13H10a1 1 0 1 1 0-2h5.58l-1.28-1.3a1 1 0 0 1 0-1.4Z" />
@@ -50,22 +65,31 @@ function Sidebar({ collapsed, onToggle }) {
         toast.success("Signed out");
     };
 
+    const sharedLinks = [
+        { to: "/lm-meetings", label: "LM Meetings", icon: ICONS.meetings },
+        { to: "/lm-feedback", label: "LM Feedback", icon: ICONS.lmFeedback },
+        { to: "/app-feedback", label: "App Feedback", icon: ICONS.appFeedback }
+    ];
+
     const links = auth.isHR
         ? [
             { to: "/employees", label: "Employees", icon: ICONS.employees },
             { to: "/requests", label: "Requests", icon: ICONS.requests },
             { to: "/pending-users", label: "Verify Employees", icon: ICONS.verify },
+            ...sharedLinks,
             { to: "/settings", label: "Settings", icon: ICONS.settings },
             { to: "/profile", label: "My Profile", icon: ICONS.profile }
         ]
         : auth.isLM
             ? [
                 { to: "/employees", label: "Employees", icon: ICONS.employees },
-                { to: "/profile", label: "My Profile", icon: ICONS.profile },
-                { to: "/assignees", label: "Assignees", icon: ICONS.assignees }
+                { to: "/assignees", label: "Assignees", icon: ICONS.assignees },
+                ...sharedLinks,
+                { to: "/profile", label: "My Profile", icon: ICONS.profile }
             ]
             : [
                 { to: "/employees", label: "Employees", icon: ICONS.employees },
+                ...sharedLinks,
                 { to: "/profile", label: "My Profile", icon: ICONS.profile }
             ];
 

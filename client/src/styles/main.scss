@@ -288,7 +288,13 @@ button {
 }
 
 .intake-upload {
-  width: fit-content;
+  width: 100%;
+}
+
+.intake-option .primary-btn.intake-upload {
+  display: inline-flex;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .inline-settings {
@@ -780,6 +786,17 @@ button {
   flex-wrap: wrap;
 }
 
+.section-heading-block {
+  display: grid !important;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.section-heading-block .page-description {
+  margin: 0;
+}
+
 .section-header h2 {
   margin: 0;
   font-size: clamp(1.4rem, 2vw, 2rem);
@@ -1205,6 +1222,17 @@ button {
   color: var(--muted);
 }
 
+.empty-state h3 {
+  margin: 12px 0 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+.empty-hint {
+  font-size: 0.85rem;
+  max-width: 360px;
+}
+
 .empty-illustration {
   display: grid;
   place-items: center;
@@ -1214,6 +1242,35 @@ button {
   background: rgba(115, 184, 65, 0.12);
   color: var(--success);
   font-weight: 700;
+}
+
+.requests-empty {
+  margin-top: 18px;
+  min-height: 280px;
+  padding: 40px 24px;
+  border-style: dashed;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(241, 244, 239, 0.55));
+}
+
+.requests-head {
+  align-items: center;
+}
+
+.requests-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.request-page-surface,
+.request-page-table {
+  min-height: 0;
+}
+
+.request-page-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .panel-state h2 {
@@ -1242,6 +1299,10 @@ button {
   border-radius: 20px;
   background: #f7faf5;
   box-shadow: var(--shadow);
+}
+
+.modal.add-employee-modal {
+  width: min(100%, 720px);
 }
 
 .request-modal {
@@ -1540,6 +1601,34 @@ button {
   display: grid;
   gap: 14px;
   margin-top: 18px;
+  width: 100%;
+}
+
+.modal-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.modal-form-grid .form-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modal-form-grid .form-span-2,
+.modal-form-grid .modal-actions {
+  grid-column: 1 / -1;
+}
+
+.modal-form-grid .modal-input,
+.modal-form-grid select {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .modal-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pending-card-actions {
@@ -2038,6 +2127,11 @@ button {
 
 .profile-card,
 .profile-assignment,
+.profile-lm-card {
+  width: 100%;
+  margin: 0;
+}
+
 .page-assignee-list {
   margin-top: 16px;
 }
@@ -2326,6 +2420,77 @@ button {
 .table-footer-actions {
   position: sticky;
   bottom: 0;
-  padding-top: 8px;
-  background: linear-gradient(180deg, transparent, var(--card) 28%);
+  padding-top: 12px;
+  // background: var(--card);
+}
+
+.table-footer-actions .primary-btn {
+  background: var(--primary);
+}
+
+.table-footer-actions .danger-btn {
+  background: #f8e8e5;
+}
+
+.feature-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.feature-form h3,
+.feature-list-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.feature-textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.feature-list {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.feature-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.feature-card-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.feature-card-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.feature-notes {
+  margin: 12px 0 0;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-wrap;
 }

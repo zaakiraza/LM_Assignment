@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AssignmentService from "../services/assignmentService";
 import AssignmentModal from "./AssignmentModal";
+import LoadingSpinner from "./LoadingSpinner";
 
 function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh }) {
     const [assignments, setAssignments] = useState([]);
@@ -14,30 +15,33 @@ function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh })
     const fetchAssignments = async () => {
         try {
             setLoading(true);
+            setError("");
             const data = await AssignmentService.getPendingAssignments();
             setAssignments(data);
         }
-        catch (error) {
-            console.error(error);
+        catch (loadError) {
+            console.error(loadError);
             setError("Failed to load pending assignments");
         }
         finally {
             setLoading(false);
         }
     };
+
     useEffect(() => {
         fetchAssignments();
     }, [refreshKey]);
 
     const handleReject = async (assignmentId) => {
+        if (!window.confirm("Reject this LM request?")) return;
         try {
             await AssignmentService.rejectAssignment(assignmentId);
             await fetchAssignments();
             onRequestRefresh?.();
         }
-        catch (error) {
-            console.error(error);
-            setError(error.response?.data?.message || "Failed to reject assignment request");
+        catch (rejectError) {
+            console.error(rejectError);
+            setError(rejectError.response?.data?.message || "Failed to reject assignment request");
         }
     };
 
@@ -78,23 +82,11 @@ function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh })
     };
 
     if (loading) {
-        return <div className="panel-state"><h2>Loading assignments...</h2></div>;
-    }
-
-    if (error) {
-        return <div className="panel-state error"><h2>{error}</h2></div>;
+        return <LoadingSpinner label="Loading requests..." />;
     }
 
     return (
         <div className={`pending-section${compact ? " compact-request" : ""}`}>
-            {/* <div className="section-header compact"> */}
-            {/* <div>
-                    <p className="eyebrow">Requests</p>
-                    <h2>LM Assignment</h2>
-                </div> */}
-            {/* <span className="counter-pill neutral">{assignments.length}</span> */}
-            {/* </div> */}
-
             {compact && (
                 <button type="button" className="primary-btn full" onClick={() => setShowRequests(true)}>
                     View requests ({assignments.length})
@@ -104,63 +96,104 @@ function PendingAssignments({ refreshKey, criteria, compact, onRequestRefresh })
             {showRequests && (
                 <div className={compact ? "modal-overlay" : "request-page-surface"}>
                     <div className={compact ? "modal request-modal" : "request-page-table"}>
-                        <div className="modal-head">
+                        <div className="modal-head requests-head">
                             <div>
                                 <p className="eyebrow">Requests</p>
                                 <h2>Pending LM assignments</h2>
                             </div>
-                            {compact && <button type="button" className="icon-close" onClick={() => setShowRequests(false)}>×</button>}
-                        </div>
-
-                        {assignments.length === 0 ? (
-                            <div className="empty-state"><p>No pending LM requests.</p></div>
-                        ) : (
-                            <div className="request-table-wrap">
-                                <table className="request-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Department</th>
-                                            <th>Requested LM</th>
-                                            <th>Designation</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {assignments.map((assignment) => (
-                                            <tr key={assignment.assignmentId}>
-                                                <td>{assignment.employeeName}</td>
-                                                <td>{assignment.employeeDepartment}</td>
-                                                <td>{assignment.lineManagerName || "Not selected yet"}</td>
-                                                <td>{assignment.lineManagerDesignation || "Pending manager selection"}</td>
-                                                <td className="table-actions">
-                                                    <button className="secondary-btn small-btn" disabled={processing} onClick={() => handleReject(assignment.assignmentId)}>Reject</button>
-                                                    <button className="primary-btn small-btn" disabled={processing} onClick={() => setSelectedAssignment(assignment)}>Assign</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="requests-head-actions">
+                                {assignments.length > 0 && (
+                                    <span className="counter-pill">{assignments.length} pending</span>
+                                )}
+                                {compact && (
+                                    <button type="button" className="icon-close" onClick={() => setShowRequests(false)}>
+                                        ×
+                                    </button>
+                                )}
                             </div>
-                        )}
+                        </div>
 
                         {error && <p className="modal-message error">{error}</p>}
-                        {bulkFailures.length > 0 && (
-                            <div className="bulk-failures">
-                                <strong>Could not assign these requests:</strong>
-                                <ul>
-                                    {bulkFailures.map((failure) => (
-                                        <li key={failure.assignmentId}>
-                                            {failure.employeeName} → {failure.lineManagerName}: {failure.error}
-                                        </li>
-                                    ))}
-                                </ul>
+
+                        {assignments.length === 0 ? (
+                            <div className="empty-state requests-empty">
+                                <div className="empty-illustration" aria-hidden="true">✓</div>
+                                <h3>All caught up</h3>
+                                <p>There are no pending LM requests right now.</p>
                             </div>
+                        ) : (
+                            <>
+                                <div className="request-table-wrap">
+                                    <table className="request-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Employee</th>
+                                                <th>Department</th>
+                                                <th>Requested LM</th>
+                                                <th>Designation</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {assignments.map((assignment) => (
+                                                <tr key={assignment.assignmentId}>
+                                                    <td>{assignment.employeeName}</td>
+                                                    <td>{assignment.employeeDepartment}</td>
+                                                <td>{assignment.lineManagerName || "Awaiting HR selection"}</td>
+                                                <td>{assignment.lineManagerDesignation || (assignment.employeeName ? "Change / new LM request" : "Pending manager selection")}</td>
+                                                    <td className="table-actions">
+                                                        <button
+                                                            className="secondary-btn small-btn"
+                                                            disabled={processing}
+                                                            onClick={() => handleReject(assignment.assignmentId)}
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                        <button
+                                                            className="primary-btn small-btn"
+                                                            disabled={processing}
+                                                            onClick={() => setSelectedAssignment(assignment)}
+                                                        >
+                                                            Assign
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {bulkFailures.length > 0 && (
+                                    <div className="bulk-failures">
+                                        <strong>Could not assign these requests:</strong>
+                                        <ul>
+                                            {bulkFailures.map((failure) => (
+                                                <li key={failure.assignmentId}>
+                                                    {failure.employeeName} → {failure.lineManagerName}: {failure.error}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                <div className="modal-actions table-footer-actions">
+                                    <button
+                                        className="secondary-btn danger-btn"
+                                        disabled={processing}
+                                        onClick={handleRejectAll}
+                                    >
+                                        Reject All
+                                    </button>
+                                    <button
+                                        className="primary-btn"
+                                        disabled={processing}
+                                        onClick={handleAssignAll}
+                                    >
+                                        {processing ? "Working..." : "Assign All"}
+                                    </button>
+                                </div>
+                            </>
                         )}
-                        <div className="modal-actions table-footer-actions">
-                            <button className="secondary-btn danger-btn" disabled={!assignments.length || processing} onClick={handleRejectAll}>Reject All</button>
-                            <button className="primary-btn" disabled={!assignments.length || processing} onClick={handleAssignAll}>Assign All</button>
-                        </div>
                     </div>
                 </div>
             )}
