@@ -36,7 +36,8 @@ function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving, inline = fa
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th>Designation</th>
+                                    <th>Email</th>
+                                    <th>Position</th>
                                     <th>Experience</th>
                                     <th>Department</th>
                                     <th>Skills</th>
@@ -47,7 +48,8 @@ function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving, inline = fa
                                 {pendingRows.map((row) => (
                                     <tr key={row._rowId}>
                                         <td>{row.name}</td>
-                                        <td>{row.designation}</td>
+                                        <td>{row.email}</td>
+                                        <td>{row.position}</td>
                                         <td>{row.experience} yrs</td>
                                         <td>{row.department}</td>
                                         <td>{Array.isArray(row.skills) ? row.skills.join(", ") : row.skills}</td>

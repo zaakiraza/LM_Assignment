@@ -27,9 +27,10 @@ class AiRecommendationService {
         const prompt = `
             You recommend a line manager for one employee. Choose exactly one candidate from the supplied list.
             Candidates already pass department, designation, and capacity constraints. Use skills first, then experience, then current load.
-            Designation priority from highest to lowest is: Software Architect, Lead Software Engineer, Senior Software Engineer, Software Engineer.
-            Prefer a candidate with a higher designation than the employee. If no higher designation is available, choose the same designation only when the candidate has more experience.
-            Never choose a lower designation or a same-designation candidate with equal or less experience.
+            Position priority from highest to lowest among LMs is: Software Architect, then Lead Software Engineer.
+            Prefer a candidate with a higher position than the employee. If no higher position is available, choose the same position only when the candidate has more experience.
+            Never choose a lower position or a same-position candidate with equal or less experience.
+            Only Software Architect and Lead Software Engineer may be line managers.
             Criteria: ${JSON.stringify(criteria)}
             Employee: ${JSON.stringify(employee)}
             Candidates: ${JSON.stringify(candidates)}
@@ -39,7 +40,7 @@ class AiRecommendationService {
         process.env.GOOGLE_API_KEY = process.env.GEMINI_API_KEY;
         const agent = new LlmAgent({
             name: "line_manager_recommender",
-            model: "gemini-3.6-flash",
+            model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
             instruction: prompt,
             generateContentConfig: { responseMimeType: "application/json" },
             includeContents: "none"
@@ -75,7 +76,7 @@ class AiRecommendationService {
         }
 
         const selectedCandidate = candidates.find(
-            (candidate) => candidate.id === Number(recommendation.lineManagerId)
+            (candidate) => String(candidate.id) === String(recommendation.lineManagerId)
         );
         if (!selectedCandidate) {
             throw new Error("AI returned a Line Manager outside the eligible candidates");

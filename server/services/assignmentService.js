@@ -1,50 +1,46 @@
-import db from "../database/database.js";
-
+import mongoose from "mongoose";
+import Assignment from "../models/Assignment.js";
+import Employee from "../models/Employee.js";
+import { serializeAssignment } from "../utils/serializers.js";
+import { LM_POSITIONS } from "../constants/positions.js";
 
 class AssignmentService {
-
-    createAssignment(employeeId, lineManagerId, criteria = {}) {
-        // 1. Check Employee exist
-        const employee = db.prepare(`SELECT * FROM employees WHERE id = ?`).get(employeeId);
+    async createAssignment(employeeId, lineManagerId, criteria = {}) {
+        const employee = await Employee.findById(employeeId);
         if (!employee) {
             throw new Error("Employee does not exist");
         }
 
-        if (!lineManagerId) {
-            const pendingRequest = db.prepare(`SELECT * FROM assignments WHERE assignedEmpId = ? AND isConfirm = 0`).get(employeeId);
-            if (pendingRequest) {
-                throw new Error("Employee already has a pending LM request");
-            }
-
-            const result = db.prepare(`
-                INSERT INTO assignments (assignedEmpId, lineManagerId, isConfirm, isActive)
-                VALUES (?, NULL, 0, 0)
-            `).run(employeeId);
-
-            return {
-                assignmentId: result.lastInsertRowid,
-                assignedEmpId: employeeId,
-                lineManagerId: null,
-                isConfirm: 0,
-                isActive: 0
-            };
+        const pendingRequest = await Assignment.findOne({
+            assignedEmpId: employeeId,
+            isConfirm: false
+        });
+        if (pendingRequest) {
+            throw new Error("Employee already has a pending LM request");
         }
 
-        // 2. Check LM exists
-        const lineManager = db.prepare(`SELECT * FROM employees WHERE id = ?`).get(lineManagerId);
+        if (!lineManagerId) {
+            const created = await Assignment.create({
+                assignedEmpId: employeeId,
+                lineManagerId: null,
+                isConfirm: false,
+                isActive: false
+            });
+            return serializeAssignment(created);
+        }
+
+        const lineManager = await Employee.findById(lineManagerId);
         if (!lineManager) {
             throw new Error("Line Manager does not exist");
         }
 
-        // 3. Employee cannot be their own LM
-        if (employeeId === lineManagerId) {
+        if (String(employeeId) === String(lineManagerId)) {
             throw new Error("Employee cannot be their own Line Manager");
         }
 
-        // 4. Check LM designation
         const allowedDesignations = Array.isArray(criteria.allowedDesignations)
             ? criteria.allowedDesignations
-            : [];
+            : LM_POSITIONS;
         const maxManagedEmployees = Number(criteria.maxManagedEmployees);
         const requireSameDepartment = criteria.requireSameDepartment !== false;
         const designationPriority = Array.isArray(criteria.designationPriority) && criteria.designationPriority.length
@@ -55,12 +51,12 @@ class AssignmentService {
             throw new Error("Valid assignment criteria are required");
         }
 
-        if (!allowedDesignations.includes(lineManager.designation)) {
+        if (!allowedDesignations.includes(lineManager.position)) {
             throw new Error("Selected employee cannot be a Line Manager");
         }
 
-        const employeeRank = designationPriority.indexOf(employee.designation);
-        const lineManagerRank = designationPriority.indexOf(lineManager.designation);
+        const employeeRank = designationPriority.indexOf(employee.position);
+        const lineManagerRank = designationPriority.indexOf(lineManager.position);
         const validHierarchy = employeeRank === -1 || lineManagerRank < employeeRank || (
             lineManagerRank === employeeRank && lineManager.experience > employee.experience
         );
@@ -68,119 +64,51 @@ class AssignmentService {
             throw new Error("Line Manager must have a higher designation or more experience at the same designation");
         }
 
-        // 5. Check same department
         if (requireSameDepartment && employee.department !== lineManager.department) {
             throw new Error("Line Manager must belong to the same department");
         }
 
-        // 6. Check LM capacity
         if (lineManager.employeeManaged >= maxManagedEmployees) {
             throw new Error("Line Manager has reached maximum capacity");
         }
 
-        // 7. Check existing pending request
-        const pendingRequest = db.prepare(`SELECT * FROM assignments WHERE assignedEmpId = ? AND isConfirm = 0`).get(employeeId);
-        if (pendingRequest) {
-            throw new Error("Employee already has a pending LM request");
-        }
-
-        // 8. Create pending request
-        const statement = db.prepare(`
-                INSERT INTO assignments (
-                    assignedEmpId,
-                    lineManagerId,
-                    isConfirm,
-                    isActive
-                )
-                VALUES (?, ?, 0, 0)
-        `);
-
-        const result = statement.run(employeeId, lineManagerId);
-
-        return {
-            assignmentId: result.lastInsertRowid,
+        const created = await Assignment.create({
             assignedEmpId: employeeId,
-            lineManagerId: lineManagerId,
-            isConfirm: 0,
-            isActive: 0
-        };
+            lineManagerId,
+            isConfirm: false,
+            isActive: false
+        });
+
+        return serializeAssignment(created);
     }
 
-    confirmAssignment(
-        assignmentId,
-        selectedLineManagerId,
-        criteria = {}
-    ) {
+    async confirmAssignment(assignmentId, selectedLineManagerId, criteria = {}) {
+        if (!mongoose.isValidObjectId(assignmentId)) {
+            throw new Error("Pending assignment not found");
+        }
 
-        const assignment =
-            db.prepare(`
-            SELECT *
-            FROM assignments
-            WHERE assignmentId = ?
-            AND isConfirm = 0
-        `).get(
-                assignmentId
-            );
-
-
+        const assignment = await Assignment.findOne({
+            _id: assignmentId,
+            isConfirm: false
+        });
         if (!assignment) {
-
-            throw new Error(
-                "Pending assignment not found"
-            );
-
+            throw new Error("Pending assignment not found");
         }
 
-
-        const employee =
-            db.prepare(`
-            SELECT *
-            FROM employees
-            WHERE id = ?
-        `).get(
-                assignment.assignedEmpId
-            );
-
-
+        const employee = await Employee.findById(assignment.assignedEmpId);
         if (!employee) {
-
-            throw new Error(
-                "Employee does not exist"
-            );
-
+            throw new Error("Employee does not exist");
         }
 
-
-        const lineManagerId =
-            selectedLineManagerId ||
-            assignment.lineManagerId;
-
-
-        const newLM =
-            db.prepare(`
-            SELECT *
-            FROM employees
-            WHERE id = ?
-        `).get(
-                lineManagerId
-            );
-
-
+        const lineManagerId = selectedLineManagerId || assignment.lineManagerId;
+        const newLM = await Employee.findById(lineManagerId);
         if (!newLM) {
-
-            throw new Error(
-                "Line Manager does not exist"
-            );
-
+            throw new Error("Line Manager does not exist");
         }
 
-
-        /*
-         * Check designation
-         */
         const allowedDesignations = Array.isArray(criteria.allowedDesignations)
             ? criteria.allowedDesignations
-            : [];
+            : LM_POSITIONS;
         const maxManagedEmployees = Number(criteria.maxManagedEmployees);
         const requireSameDepartment = criteria.requireSameDepartment !== false;
 
@@ -188,345 +116,174 @@ class AssignmentService {
             throw new Error("Valid assignment criteria are required");
         }
 
-        if (!allowedDesignations.includes(newLM.designation)) {
-
-            throw new Error(
-                "Selected employee cannot be a Line Manager"
-            );
-
+        if (!allowedDesignations.includes(newLM.position)) {
+            throw new Error("Selected employee cannot be a Line Manager");
         }
 
-
-        /*
-         * Employee cannot be their own LM
-         */
-        if (
-            newLM.id === employee.id
-        ) {
-
-            throw new Error(
-                "Employee cannot be their own Line Manager"
-            );
-
+        if (String(newLM._id) === String(employee._id)) {
+            throw new Error("Employee cannot be their own Line Manager");
         }
 
-
-        /*
-         * Same department
-         */
         if (requireSameDepartment && newLM.department !== employee.department) {
-
-            throw new Error(
-                "Line Manager must belong to the same department"
-            );
-
+            throw new Error("Line Manager must belong to the same department");
         }
 
+        const currentAssignment = await Assignment.findOne({
+            assignedEmpId: employee._id,
+            isConfirm: true,
+            isActive: true
+        });
 
-        /*
-         * Find current active LM
-         */
-        const currentAssignment =
-            db.prepare(`
-            SELECT *
-            FROM assignments
-            WHERE assignedEmpId = ?
-            AND isConfirm = 1
-            AND isActive = 1
-        `).get(
-                employee.id
-            );
-
-
-        /*
-         * If employee already has this
-         * exact LM, don't increase count.
-         */
-        if (
-            currentAssignment &&
-            currentAssignment.lineManagerId ===
-            newLM.id
-        ) {
-
-            throw new Error(
-                "Employee is already assigned to this Line Manager"
-            );
-
+        if (currentAssignment && String(currentAssignment.lineManagerId) === String(newLM._id)) {
+            throw new Error("Employee is already assigned to this Line Manager");
         }
 
-
-        /*
-         * Capacity check
-         *
-         * Only necessary when this is a
-         * new/different LM.
-         */
         if (newLM.employeeManaged >= maxManagedEmployees) {
-
-            throw new Error(
-                "Line Manager has reached maximum capacity"
-            );
-
+            throw new Error("Line Manager has reached maximum capacity");
         }
 
+        if (currentAssignment) {
+            const oldManager = await Employee.findById(currentAssignment.lineManagerId);
+            if (oldManager) {
+                oldManager.employeeManaged = Math.max(0, (oldManager.employeeManaged || 0) - 1);
+                await oldManager.save();
+            }
+            currentAssignment.isActive = false;
+            await currentAssignment.save();
+        }
 
-        /*
-         * Start transaction
-         */
-        const transaction =
-            db.transaction(() => {
+        assignment.lineManagerId = newLM._id;
+        assignment.isConfirm = true;
+        assignment.isActive = true;
+        await assignment.save();
 
-                /*
-                 * If employee already has
-                 * another LM, remove that
-                 * relationship.
-                 */
-                if (
-                    currentAssignment
-                ) {
+        newLM.employeeManaged = (newLM.employeeManaged || 0) + 1;
+        await newLM.save();
 
-                    /*
-                     * Decrease old LM count
-                     */
-                    db.prepare(`
-                    UPDATE employees
-                    SET employeeManaged =
-                        CASE
-                            WHEN employeeManaged > 0
-                            THEN employeeManaged - 1
-                            ELSE 0
-                        END
-                    WHERE id = ?
-                `).run(
-                        currentAssignment.lineManagerId
-                    );
+        const refreshed = await Assignment.findById(assignmentId)
+            .populate("assignedEmpId")
+            .populate("lineManagerId");
 
+        const employeeDoc = refreshed.assignedEmpId;
+        const lmDoc = refreshed.lineManagerId;
 
-                    /*
-                     * Make old assignment
-                     * historical.
-                     */
-                    db.prepare(`
-                    UPDATE assignments
-                    SET isActive = 0
-                    WHERE assignmentId = ?
-                `).run(
-                        currentAssignment.assignmentId
-                    );
-
-                }
-
-
-                /*
-                 * Confirm pending assignment
-                 */
-                db.prepare(`
-                UPDATE assignments
-                SET
-                    lineManagerId = ?,
-                    isConfirm = 1,
-                    isActive = 1
-                WHERE assignmentId = ?
-            `).run(
-                    newLM.id,
-                    assignmentId
-                );
-
-
-                /*
-                 * Increase new LM count
-                 */
-                db.prepare(`
-                UPDATE employees
-                SET employeeManaged =
-                    employeeManaged + 1
-                WHERE id = ?
-            `).run(
-                    newLM.id
-                );
-
-            });
-
-
-        transaction();
-
-
-        /*
-         * Return confirmed assignment
-         */
-        return db.prepare(`
-        SELECT
-            a.assignmentId,
-            a.assignedEmpId,
-
-            employee.name AS employeeName,
-            employee.department AS employeeDepartment,
-
-            a.lineManagerId,
-
-            lm.name AS lineManagerName,
-            lm.designation AS lineManagerDesignation,
-            lm.experience AS lineManagerExperience,
-            lm.department AS lineManagerDepartment,
-            lm.skills AS lineManagerSkills,
-            lm.employeeManaged AS lineManagerEmployeeManaged,
-
-            a.isConfirm,
-            a.isActive
-
-        FROM assignments a
-
-        JOIN employees employee
-            ON employee.id = a.assignedEmpId
-
-        LEFT JOIN employees lm
-            ON lm.id = a.lineManagerId
-
-        WHERE a.assignmentId = ?
-    `).get(
-            assignmentId
-        );
-
+        return {
+            ...serializeAssignment(refreshed),
+            employeeName: employeeDoc?.name,
+            employeeDepartment: employeeDoc?.department,
+            lineManagerName: lmDoc?.name,
+            lineManagerDesignation: lmDoc?.position,
+            lineManagerExperience: lmDoc?.experience,
+            lineManagerDepartment: lmDoc?.department,
+            lineManagerSkills: lmDoc?.skills,
+            lineManagerEmployeeManaged: lmDoc?.employeeManaged
+        };
     }
 
-    getAllAssignments() {
-        return db.prepare(`SELECT * FROM assignments`).all();
+    async getAllAssignments() {
+        const assignments = await Assignment.find();
+        return assignments.map((assignment) => serializeAssignment(assignment));
     }
 
-    getPendingAssignments() {
-        return db.prepare(`SELECT * FROM assignments WHERE isConfirm = 0`).all();
+    async getPendingAssignments() {
+        const assignments = await Assignment.find({ isConfirm: false })
+            .sort({ createdAt: -1 })
+            .populate("assignedEmpId")
+            .populate("lineManagerId");
+
+        return assignments.map((assignment) => ({
+            ...serializeAssignment(assignment),
+            employeeName: assignment.assignedEmpId?.name,
+            employeeDepartment: assignment.assignedEmpId?.department,
+            lineManagerName: assignment.lineManagerId?.name || null,
+            lineManagerDesignation: assignment.lineManagerId?.position || null
+        }));
     }
 
-    getEmployeeAssignment(employeeId) {
-        return db.prepare(`
-        SELECT
-            a.assignmentId,
-            a.assignedEmpId,
-            a.lineManagerId,
-            a.isConfirm,
-            a.isActive,
+    async getEmployeeAssignment(employeeId) {
+        const assignment = await Assignment.findOne({
+            assignedEmpId: employeeId,
+            isConfirm: true,
+            isActive: true
+        }).populate("lineManagerId");
 
-            lm.name AS lineManagerName,
-            lm.designation AS lineManagerDesignation,
-            lm.experience AS lineManagerExperience,
-            lm.department AS lineManagerDepartment,
-            lm.skills AS lineManagerSkills,
-            lm.employeeManaged AS lineManagerEmployeeManaged
+        if (!assignment) return null;
 
-        FROM assignments a
-
-        LEFT JOIN employees lm
-            ON lm.id = a.lineManagerId
-
-        WHERE a.assignedEmpId = ?
-        AND a.isConfirm = 1
-        AND a.isActive = 1
-
-    `).get(employeeId);
+        const lm = assignment.lineManagerId;
+        return {
+            ...serializeAssignment(assignment),
+            lineManagerName: lm?.name,
+            lineManagerDesignation: lm?.position,
+            lineManagerExperience: lm?.experience,
+            lineManagerDepartment: lm?.department,
+            lineManagerSkills: lm?.skills,
+            lineManagerEmployeeManaged: lm?.employeeManaged
+        };
     }
 
-    rejectAssignment(assignmentId) {
-        const assignment = db.prepare(`
-            SELECT *
-            FROM assignments
-            WHERE assignmentId = ?
-        `).get(assignmentId);
+    async getPendingAssignmentForEmployee(employeeId) {
+        const assignment = await Assignment.findOne({
+            assignedEmpId: employeeId,
+            isConfirm: false
+        }).populate("lineManagerId");
 
+        if (!assignment) return null;
+
+        return {
+            ...serializeAssignment(assignment),
+            lineManagerName: assignment.lineManagerId?.name || null,
+            lineManagerDesignation: assignment.lineManagerId?.position || null
+        };
+    }
+
+    async rejectAssignment(assignmentId) {
+        const assignment = await Assignment.findById(assignmentId);
         if (!assignment) {
             throw new Error("Assignment not found");
         }
 
-        if (assignment.isConfirm === 1 && assignment.isActive === 1) {
-            const transaction = db.transaction(() => {
-                db.prepare(`
-                    UPDATE employees
-                    SET employeeManaged = CASE
-                        WHEN employeeManaged > 0 THEN employeeManaged - 1
-                        ELSE 0
-                    END
-                    WHERE id = ?
-                `).run(assignment.lineManagerId);
-
-                db.prepare(`
-                    UPDATE assignments
-                    SET isConfirm = 0,
-                        isActive = 0
-                    WHERE assignmentId = ?
-                `).run(assignmentId);
-            });
-
-            transaction();
+        if (assignment.isConfirm && assignment.isActive) {
+            if (assignment.lineManagerId) {
+                const manager = await Employee.findById(assignment.lineManagerId);
+                if (manager) {
+                    manager.employeeManaged = Math.max(0, (manager.employeeManaged || 0) - 1);
+                    await manager.save();
+                }
+            }
+            assignment.isConfirm = false;
+            assignment.isActive = false;
+            await assignment.save();
 
             return {
-                ...assignment,
-                isConfirm: 0,
-                isActive: 0,
+                ...serializeAssignment(assignment),
                 rejected: true
             };
         }
 
-        db.prepare(`DELETE FROM assignments WHERE assignmentId = ?`).run(assignmentId);
-
+        await Assignment.findByIdAndDelete(assignmentId);
         return {
-            ...assignment,
-            isConfirm: 0,
-            isActive: 0,
+            ...serializeAssignment(assignment),
             rejected: true,
             deleted: true
         };
     }
 
-    cancelPendingAssignment(assignmentId) {
-        const assignment = db.prepare(`
-            SELECT *
-            FROM assignments
-            WHERE assignmentId = ?
-            AND isConfirm = 0
-        `).get(assignmentId);
-
+    async cancelPendingAssignment(assignmentId) {
+        const assignment = await Assignment.findOne({
+            _id: assignmentId,
+            isConfirm: false
+        });
         if (!assignment) {
             throw new Error("Pending assignment request not found");
         }
 
-        db.prepare(`DELETE FROM assignments WHERE assignmentId = ?`).run(assignmentId);
-
+        await Assignment.findByIdAndDelete(assignmentId);
         return {
-            assignmentId,
-            assignedEmpId: assignment.assignedEmpId,
+            assignmentId: String(assignmentId),
+            assignedEmpId: String(assignment.assignedEmpId),
             cancelled: true
         };
     }
-
-    getPendingAssignments() {
-        return db.prepare(`
-        SELECT
-            a.assignmentId,
-
-            a.assignedEmpId,
-            employee.name AS employeeName,
-            employee.department AS employeeDepartment,
-
-            a.lineManagerId,
-            lm.name AS lineManagerName,
-            lm.designation AS lineManagerDesignation,
-
-            a.isConfirm,
-            a.isActive
-
-        FROM assignments a
-
-        JOIN employees employee
-            ON employee.id = a.assignedEmpId
-
-        LEFT JOIN employees lm
-            ON lm.id = a.lineManagerId
-
-        WHERE a.isConfirm = 0
-
-        ORDER BY a.assignmentId DESC
-    `).all();
-    }
 }
-
 
 export default new AssignmentService();

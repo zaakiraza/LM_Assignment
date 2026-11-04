@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import EmployeeService from "../services/employeeService";
+import { POSITIONS } from "../config/positions";
 
 function EditEmployeeModal({ employee, onClose, onSaved }) {
     const [form, setForm] = useState({
         name: "",
-        designation: "",
+        position: "",
         experience: "",
         department: "",
         skills: ""
@@ -20,8 +21,9 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
                 if (typeof employee.skills === "string") {
                     try {
                         const parsed = JSON.parse(employee.skills);
-                        return Array.isArray(parsed) ? parsed : parsed.split(",");
-                    } catch {
+                        return Array.isArray(parsed) ? parsed : String(parsed).split(",");
+                    }
+                    catch {
                         return employee.skills.split(",");
                     }
                 }
@@ -30,7 +32,7 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
 
         setForm({
             name: employee.name || "",
-            designation: employee.designation || "",
+            position: employee.position || employee.designation || "",
             experience: employee.experience ?? "",
             department: employee.department || "",
             skills: skillValues.join(", ")
@@ -39,10 +41,7 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
 
     const handleChange = (event) => {
         const { name, value } = event.target;
-        setForm((current) => ({
-            ...current,
-            [name]: value
-        }));
+        setForm((current) => ({ ...current, [name]: value }));
     };
 
     const handleSubmit = async (event) => {
@@ -50,19 +49,13 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
         try {
             setSubmitting(true);
             setError("");
-            const payload = {
-                ...employee,
+            await EmployeeService.updateEmployee(employee.id, {
                 name: form.name.trim(),
-                designation: form.designation,
+                position: form.position,
                 experience: Number(form.experience),
                 department: form.department,
-                skills: form.skills
-                    .split(",")
-                    .map((skill) => skill.trim())
-                    .filter(Boolean)
-            };
-
-            await EmployeeService.updateEmployee(employee.id, payload);
+                skills: form.skills.split(",").map((skill) => skill.trim()).filter(Boolean)
+            });
             onSaved();
             onClose();
         }
@@ -90,13 +83,12 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
                     <label className="field-label">Name</label>
                     <input className="modal-input" name="name" value={form.name} onChange={handleChange} required />
 
-                    <label className="field-label">Designation</label>
-                    <select className="modal-input" name="designation" value={form.designation} onChange={handleChange} required>
-                        <option value="">Select designation</option>
-                        <option value="Software Architect">Software Architect</option>
-                        <option value="Lead Software Engineer">Lead Software Engineer</option>
-                        <option value="Senior Software Engineer">Senior Software Engineer</option>
-                        <option value="Software Engineer">Software Engineer</option>
+                    <label className="field-label">Position</label>
+                    <select className="modal-input" name="position" value={form.position} onChange={handleChange} required>
+                        <option value="">Select position</option>
+                        {POSITIONS.map((position) => (
+                            <option key={position} value={position}>{position}</option>
+                        ))}
                     </select>
 
                     <label className="field-label">Experience</label>
@@ -108,6 +100,7 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
                         <option value="netSuite">netSuite</option>
                         <option value="App dev">App dev</option>
                         <option value="IT">IT</option>
+                        <option value="HR">HR</option>
                     </select>
 
                     <label className="field-label">Skills</label>

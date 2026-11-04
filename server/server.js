@@ -1,14 +1,24 @@
-import app from "./app.js";
 import { configDotenv } from "dotenv";
-import "./database/database.js";
+configDotenv();
 
-configDotenv()
-const PORT = process.env.PORT
+import app from "./app.js";
+import { connectDatabase } from "./database/database.js";
 
-if (process.env.NODE_ENV !== "production") {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+const PORT = process.env.PORT || 5000;
+
+async function start() {
+    await connectDatabase();
+
+    if (!process.env.VERCEL) {
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }
 }
+
+start().catch((error) => {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+});
 
 export default app;

@@ -21,9 +21,9 @@ function AddEmployees({ onChanged }) {
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
             const normalizedRows = rows.map((row, index) => ({
-                id: row.id || row.ID || Date.now() + index,
                 name: row.name || row.Name || "",
-                designation: row.designation || row.Designation || "",
+                email: row.email || row.Email || "",
+                position: row.position || row.Position || row.designation || row.Designation || "",
                 experience: row.experience ?? row.Experience ?? "",
                 department: row.department || row.Department || "",
                 skills: String(row.skills || row.Skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),

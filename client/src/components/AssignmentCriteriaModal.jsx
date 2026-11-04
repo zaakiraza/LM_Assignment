@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-
-const availableDesignations = [
-    "Software Architect",
-    "Lead Software Engineer",
-    "Senior Software Engineer",
-    "Software Engineer"
-];
+import { LM_POSITIONS } from "../config/positions";
 
 function AssignmentCriteriaModal({ criteria, onClose, onSave, inline = false }) {
     const [draft, setDraft] = useState({
@@ -13,6 +7,7 @@ function AssignmentCriteriaModal({ criteria, onClose, onSave, inline = false }) 
         allowedDesignations: [...criteria.allowedDesignations]
     });
     const [feedback, setFeedback] = useState("");
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         setDraft({
@@ -28,21 +23,34 @@ function AssignmentCriteriaModal({ criteria, onClose, onSave, inline = false }) 
                 ...current,
                 allowedDesignations: isSelected
                     ? current.allowedDesignations.filter((item) => item !== designation)
-                    : [...current.allowedDesignations, designation]
+                    : [...current.allowedDesignations, designation],
+                designationPriority: isSelected
+                    ? current.designationPriority.filter((item) => item !== designation)
+                    : [...(current.designationPriority || []), designation]
             };
         });
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
         if (draft.allowedDesignations.length === 0 || draft.maxManagedEmployees < 1) return;
         const nextCriteria = {
             ...draft,
-            maxManagedEmployees: Number(draft.maxManagedEmployees)
+            maxManagedEmployees: Number(draft.maxManagedEmployees),
+            designationPriority: draft.allowedDesignations
         };
-        onSave(nextCriteria);
-        setDraft(nextCriteria);
-        setFeedback("Criteria applied successfully. New recommendations will use these settings.");
+        try {
+            setSaving(true);
+            await onSave(nextCriteria);
+            setDraft(nextCriteria);
+            setFeedback("Criteria saved. New recommendations will use these settings.");
+        }
+        catch (error) {
+            setFeedback(error.response?.data?.message || "Failed to save criteria");
+        }
+        finally {
+            setSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -89,9 +97,9 @@ function AssignmentCriteriaModal({ criteria, onClose, onSave, inline = false }) 
                         onChange={(event) => setDraft({ ...draft, maxManagedEmployees: event.target.value })}
                     />
 
-                    <span className="field-label">Eligible LM designations</span>
+                    <span className="field-label">Eligible LM positions</span>
                     <div className="criteria-options">
-                        {availableDesignations.map((designation) => (
+                        {LM_POSITIONS.map((designation) => (
                             <label key={designation} className="criteria-option">
                                 <input
                                     type="checkbox"
@@ -116,8 +124,8 @@ function AssignmentCriteriaModal({ criteria, onClose, onSave, inline = false }) 
 
                     <div className="modal-actions">
                         <button type="button" className="secondary-btn" onClick={handleCancel}>Cancel</button>
-                        <button type="submit" className="primary-btn" disabled={!draft.allowedDesignations.length || draft.maxManagedEmployees < 1}>
-                            Apply criteria
+                        <button type="submit" className="primary-btn" disabled={saving || !draft.allowedDesignations.length || draft.maxManagedEmployees < 1}>
+                            {saving ? "Saving..." : "Save criteria"}
                         </button>
                     </div>
                 </form>

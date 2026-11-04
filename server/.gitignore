@@ -1,2 +1,6 @@
 .env
 node_modules
+.dockerignore
+Dockerfile
+.env.example
+seed.js

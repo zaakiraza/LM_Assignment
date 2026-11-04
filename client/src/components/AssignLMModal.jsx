@@ -93,7 +93,7 @@ function AssignLMModal({ employee, currentAssignment, criteria, onClose, onAssig
                             <option value="">Select LM</option>
                             {lineManagers.map((lm) => (
                                 <option key={lm.id} value={lm.id}>
-                                    {lm.name} — {lm.designation} — {lm.employeeManaged} managees
+                                    {lm.name} — {lm.position} — {lm.employeeManaged} managees
                                 </option>
                             ))}
                         </select>
