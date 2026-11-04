@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
@@ -63,6 +64,15 @@ const ICONS = {
 function Sidebar({ collapsed, onToggle }) {
     const auth = useAuth();
     const toast = useToast();
+    const location = useLocation();
+    const navRef = useRef(null);
+
+    // On the mobile bottom bar, glide the active icon into view after navigation.
+    useEffect(() => {
+        if (!window.matchMedia("(max-width: 768px)").matches) return;
+        const active = navRef.current?.querySelector(".sidebar-link.active");
+        active?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }, [location.pathname]);
 
     const handleLogout = async () => {
         if (!window.confirm("Sign out of Line Manager Desk?")) return;
@@ -117,7 +127,7 @@ function Sidebar({ collapsed, onToggle }) {
                     {collapsed ? "›" : "‹"}
                 </button>
             </div>
-            <nav className="sidebar-nav" aria-label="Main navigation">
+            <nav className="sidebar-nav" aria-label="Main navigation" ref={navRef}>
                 {links.map((link) => (
                     <NavLink
                         key={link.to}

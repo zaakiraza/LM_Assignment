@@ -56,6 +56,11 @@ const AVATAR_SIZE = 58;
 const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 480;
 
+/** Space kept free at the bottom for the mobile tab bar. */
+function bottomReserve() {
+    return typeof window !== "undefined" && window.innerWidth <= 768 ? 84 : 0;
+}
+
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
@@ -80,7 +85,7 @@ function FloatingHRChat() {
     const [loading, setLoading] = useState(false);
     const [position, setPosition] = useState(() => ({
         x: typeof window !== "undefined" ? window.innerWidth - 92 : 24,
-        y: typeof window !== "undefined" ? window.innerHeight - 96 : 24
+        y: typeof window !== "undefined" ? window.innerHeight - 96 - bottomReserve() : 24
     }));
 
     const threadRef = useRef(null);
@@ -108,7 +113,7 @@ function FloatingHRChat() {
         const keepInBounds = () => {
             setPosition((current) => ({
                 x: clamp(current.x, 12, window.innerWidth - AVATAR_SIZE - 12),
-                y: clamp(current.y, 12, window.innerHeight - AVATAR_SIZE - 12)
+                y: clamp(current.y, 12, window.innerHeight - AVATAR_SIZE - 12 - bottomReserve())
             }));
         };
         window.addEventListener("resize", keepInBounds);
@@ -129,7 +134,7 @@ function FloatingHRChat() {
             }
             setPosition({
                 x: clamp(nextX, 12, window.innerWidth - AVATAR_SIZE - 12),
-                y: clamp(nextY, 12, window.innerHeight - AVATAR_SIZE - 12)
+                y: clamp(nextY, 12, window.innerHeight - AVATAR_SIZE - 12 - bottomReserve())
             });
         };
 
@@ -202,7 +207,7 @@ function FloatingHRChat() {
     const panelTop = clamp(
         position.y - PANEL_HEIGHT - 14,
         12,
-        Math.max(12, window.innerHeight - PANEL_HEIGHT - 12)
+        Math.max(12, window.innerHeight - PANEL_HEIGHT - 12 - bottomReserve())
     );
 
     return (
