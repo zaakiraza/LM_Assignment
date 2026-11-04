@@ -1,4 +1,3 @@
-import { InMemoryRunner, LlmAgent, stringifyContent } from "@google/adk";
 import Employee from "../models/Employee.js";
 import Assignment from "../models/Assignment.js";
 import { LM_POSITIONS } from "../constants/positions.js";
@@ -75,6 +74,9 @@ class ChatService {
 
         process.env.GOOGLE_API_KEY = process.env.GEMINI_API_KEY;
         const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+        // Lazy-load ADK so auth and other routes do not pay cold-start cost / crashes
+        const { InMemoryRunner, LlmAgent, stringifyContent } = await import("@google/adk");
 
         const agent = new LlmAgent({
             name: "hr_workforce_assistant",

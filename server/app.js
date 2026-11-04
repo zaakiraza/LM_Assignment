@@ -10,8 +10,26 @@ import meetingRoutes from "./routes/meetingRoutes.js";
 
 const app = express();
 
+const allowedOrigins = String(process.env.CLIENT_URL || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || true,
+    origin(origin, callback) {
+        // Allow non-browser / same-origin tools (no Origin header)
+        if (!origin) {
+            return callback(null, true);
+        }
+        // If CLIENT_URL is unset, allow all (useful for quick deploys)
+        if (!allowedOrigins.length) {
+            return callback(null, true);
+        }
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(null, false);
+    },
     credentials: true
 }));
 app.use(express.json({ limit: "2mb" }));
