@@ -1,12 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const ICONS = {
-    import: (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />
-        </svg>
-    ),
     employees: (
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M9 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm8.5-1a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5ZM3.5 19.5c0-2.9 2.4-4.5 5.5-4.5s5.5 1.6 5.5 4.5V20a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1v-.5Zm11.2-.5c.2-.9.7-1.7 1.4-2.3.9-.7 2.1-1.2 3.4-1.2 2.2 0 3.5 1.1 3.5 3v.5a1 1 0 0 1-1 1h-6.5a1.2 1.2 0 0 1-.8-.5Z" />
@@ -46,10 +42,16 @@ const ICONS = {
 
 function Sidebar({ collapsed, onToggle }) {
     const auth = useAuth();
+    const toast = useToast();
+
+    const handleLogout = async () => {
+        if (!window.confirm("Sign out of Line Manager Desk?")) return;
+        await auth.logout();
+        toast.success("Signed out");
+    };
 
     const links = auth.isHR
         ? [
-            { to: "/add-employee", label: "Import Employees", icon: ICONS.import },
             { to: "/employees", label: "Employees", icon: ICONS.employees },
             { to: "/requests", label: "Requests", icon: ICONS.requests },
             { to: "/pending-users", label: "Verify Employees", icon: ICONS.verify },
@@ -102,7 +104,7 @@ function Sidebar({ collapsed, onToggle }) {
                 <button
                     type="button"
                     className="secondary-btn small-btn full sidebar-logout"
-                    onClick={() => auth.logout()}
+                    onClick={handleLogout}
                     title="Sign out"
                 >
                     <span className="sidebar-link-icon">{ICONS.logout}</span>

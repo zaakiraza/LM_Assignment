@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import EmployeeService from "../services/employeeService";
 import { POSITIONS } from "../config/positions";
+import { useToast } from "../context/ToastContext";
 
 function EditEmployeeModal({ employee, onClose, onSaved }) {
+    const toast = useToast();
     const [form, setForm] = useState({
         name: "",
         position: "",
@@ -56,12 +58,15 @@ function EditEmployeeModal({ employee, onClose, onSaved }) {
                 department: form.department,
                 skills: form.skills.split(",").map((skill) => skill.trim()).filter(Boolean)
             });
+            toast.success(`${form.name.trim() || "Employee"} updated`);
             onSaved();
             onClose();
         }
         catch (saveError) {
             console.error(saveError);
-            setError(saveError.response?.data?.message || "Failed to update employee");
+            const message = saveError.response?.data?.message || "Failed to update employee";
+            setError(message);
+            toast.error(message);
         }
         finally {
             setSubmitting(false);

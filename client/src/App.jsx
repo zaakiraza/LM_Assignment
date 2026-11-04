@@ -3,7 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import Sidebar from "./components/Sidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Employees from "./pages/Employees";
-import AddEmployees from "./pages/AddEmployees";
 import Requests from "./pages/Requests";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -15,6 +14,8 @@ import FloatingHRChat from "./components/FloatingHRChat";
 import { defaultAssignmentCriteria } from "./config/assignmentCriteria";
 import SettingsService from "./services/settingsService";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
+import LoadingSpinner from "./components/LoadingSpinner";
 import "./styles/main.scss";
 
 function AppRoutes() {
@@ -41,7 +42,7 @@ function AppRoutes() {
     };
 
     if (auth.loading) {
-        return <div className="panel-state"><h2>Loading workspace...</h2></div>;
+        return <LoadingSpinner fullPage label="Loading workspace..." />;
     }
 
     const bareRoutes = ["/login", "/pending"];
@@ -72,11 +73,7 @@ function AppRoutes() {
                             <Employees criteria={assignmentCriteria} refreshKey={assignmentRefreshKey} onRequestRefresh={triggerAssignmentRefresh} />
                         </ProtectedRoute>
                     } />
-                    <Route path="/add-employee" element={
-                        <ProtectedRoute requireHR>
-                            <AddEmployees onChanged={triggerAssignmentRefresh} />
-                        </ProtectedRoute>
-                    } />
+                    <Route path="/add-employee" element={<Navigate to="/employees" replace />} />
                     <Route path="/requests" element={
                         <ProtectedRoute requireHR>
                             <Requests criteria={assignmentCriteria} refreshKey={assignmentRefreshKey} onRequestRefresh={triggerAssignmentRefresh} />
@@ -109,9 +106,11 @@ function AppRoutes() {
 function App() {
     return (
         <AuthProvider>
-            <BrowserRouter>
-                <AppRoutes />
-            </BrowserRouter>
+            <ToastProvider>
+                <BrowserRouter>
+                    <AppRoutes />
+                </BrowserRouter>
+            </ToastProvider>
         </AuthProvider>
     );
 }

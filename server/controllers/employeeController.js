@@ -3,6 +3,7 @@ import responseHandler from "../utils/responseHandler.js";
 import XLSX from "xlsx";
 import AiRecommendationService from "../services/aiRecommendationService.js";
 import { isHR, isLMCapable } from "../constants/positions.js";
+import { mapExcelRows } from "../utils/excelImport.js";
 
 class EmployeeController {
     async getEmployees(req, res) {
@@ -97,14 +98,7 @@ class EmployeeController {
             const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-            const employees = rows.map((row) => ({
-                name: row.name || row.Name,
-                email: row.email || row.Email || undefined,
-                position: row.position || row.Position || row.designation || row.Designation,
-                experience: row.experience ?? row.Experience,
-                department: row.department || row.Department,
-                skills: row.skills || row.Skills || ""
-            }));
+            const employees = mapExcelRows(rows);
 
             const importedCount = await EmployeeService.createEmployees(employees);
             return responseHandler.success(res, { importedCount }, "Employees imported successfully", 201);

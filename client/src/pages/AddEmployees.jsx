@@ -1,87 +1,62 @@
 import { useState } from "react";
 import AddEmployeeModal from "../components/AddEmployeeModal";
-import ExcelPreviewModal from "../components/ExcelPreviewModal";
-import EmployeeService from "../services/employeeService";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { useToast } from "../context/ToastContext";
+import { mapExcelRows, validateExcelFile } from "../utils/excelImport";
 import * as XLSX from "xlsx";
 
-function AddEmployees({ onChanged }) {
+function AddEmployees({ onChanged, onClose, onExcelReady, asModal = false }) {
+    const toast = useToast();
     const [showSingle, setShowSingle] = useState(false);
-    const [previewRows, setPreviewRows] = useState(null);
-    const [saving, setSaving] = useState(false);
+    const [parsing, setParsing] = useState(false);
     const [error, setError] = useState("");
 
     const handleExcel = async (event) => {
         const file = event.target.files?.[0];
         event.target.value = "";
+        setError("");
         if (!file) return;
 
         try {
-            setSaving(true);
+            validateExcelFile(file);
+            setParsing(true);
             const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+            if (!workbook.SheetNames?.length) {
+                throw new Error("The Excel file does not contain any sheets");
+            }
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-            const normalizedRows = rows.map((row, index) => ({
-                name: row.name || row.Name || "",
-                email: row.email || row.Email || "",
-                position: row.position || row.Position || row.designation || row.Designation || "",
-                experience: row.experience ?? row.Experience ?? "",
-                department: row.department || row.Department || "",
-                skills: String(row.skills || row.Skills || "").split(",").map((skill) => skill.trim()).filter(Boolean),
-                _rowId: `${Date.now()}-${index}`
-            }));
-            if (!normalizedRows.length) throw new Error("The Excel file does not contain any employee rows");
-            setPreviewRows(normalizedRows);
+            const normalizedRows = mapExcelRows(rows);
+            toast.success(`${normalizedRows.length} row(s) ready in the employees table`);
+            onExcelReady?.(normalizedRows);
+            onClose?.();
         }
         catch (loadError) {
-            setError(loadError.message || "Failed to preview employees");
+            const message = loadError.message || "Failed to read Excel file";
+            setError(message);
+            toast.error(message);
         }
         finally {
-            setSaving(false);
+            setParsing(false);
         }
     };
 
-    const addOne = async (employee) => {
-        try {
-            setSaving(true);
-            const { _rowId, ...payload } = employee;
-            await EmployeeService.createEmployee(payload);
-            onChanged?.();
-            return true;
-        }
-        catch (saveError) {
-            setError(saveError.response?.data?.message || "Failed to add employee");
-            return false;
-        }
-        finally {
-            setSaving(false);
-        }
-    };
-
-    const addAll = async (employees) => {
-        try {
-            setSaving(true);
-            await EmployeeService.createEmployees(employees.map(({ _rowId, ...employee }) => employee));
-            setPreviewRows(null);
-            onChanged?.();
-            return true;
-        }
-        catch (saveError) {
-            setError(saveError.response?.data?.message || "Failed to add employees");
-            return false;
-        }
-        finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <section className="page-panel add-employees-page">
-            <p className="eyebrow">Employee intake</p>
-            <div className="page-heading">
+    const content = (
+        <>
+            <div className="modal-head">
                 <div>
+                    <p className="eyebrow">Employee intake</p>
                     <h2>Add employees</h2>
-                    <p className="page-description">Add one employee manually or review an Excel file before saving.</p>
+                    <p className="page-description">
+                        Add one employee manually or upload Excel with columns:
+                        name, position, experience, department, skills (email optional). Max 5 MB.
+                    </p>
                 </div>
+                {onClose && (
+                    <button type="button" className="icon-close" onClick={onClose} aria-label="Close">
+                        ×
+                    </button>
+                )}
             </div>
 
             <div className="intake-options">
@@ -89,32 +64,52 @@ function AddEmployees({ onChanged }) {
                     <p className="mini-label">Option 01</p>
                     <h3>Single employee</h3>
                     <p>Enter one employee record with the validated form.</p>
-                    <button type="button" className="primary-btn" onClick={() => setShowSingle(true)}>Add single employee</button>
+                    <button type="button" className="primary-btn" onClick={() => setShowSingle(true)}>
+                        Add single employee
+                    </button>
                 </article>
                 <article className="intake-option">
                     <p className="mini-label">Option 02</p>
                     <h3>Bulk import</h3>
-                    <p>Preview all Excel rows, then add one or all records.</p>
-                    <label className="secondary-btn import-btn intake-upload">
-                        Choose Excel file
-                        <input type="file" accept=".xlsx,.xls" onChange={handleExcel} disabled={saving} />
+                    <p>Validated rows open in the main employees table so you can add them one by one or all at once.</p>
+                    <label className={`secondary-btn import-btn intake-upload${parsing ? " disabled" : ""}`}>
+                        {parsing ? "Reading file..." : "Choose Excel file"}
+                        <input type="file" accept=".xlsx,.xls" onChange={handleExcel} disabled={parsing} />
                     </label>
                 </article>
             </div>
 
+            {parsing && <LoadingSpinner label="Validating Excel file..." compact />}
             {error && <p className="modal-message error">{error}</p>}
-            {showSingle && <AddEmployeeModal onClose={() => setShowSingle(false)} onAdded={() => { setShowSingle(false); onChanged?.(); }} />}
-            {previewRows && (
-                <ExcelPreviewModal
-                    rows={previewRows}
-                    saving={saving}
-                    inline
-                    onClose={() => setPreviewRows(null)}
-                    onAdd={addOne}
-                    onAddAll={addAll}
+        </>
+    );
+
+    return (
+        <>
+            {asModal ? (
+                <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Add employees">
+                    <div className="modal add-employees-modal">
+                        {content}
+                    </div>
+                </div>
+            ) : (
+                <section className="page-panel add-employees-page">
+                    {content}
+                </section>
+            )}
+
+            {showSingle && (
+                <AddEmployeeModal
+                    onClose={() => setShowSingle(false)}
+                    onAdded={() => {
+                        setShowSingle(false);
+                        toast.success("Employee added");
+                        onChanged?.();
+                        onClose?.();
+                    }}
                 />
             )}
-        </section>
+        </>
     );
 }
 

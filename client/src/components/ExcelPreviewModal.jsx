@@ -17,6 +17,14 @@ function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving, inline = fa
         }
     };
 
+    const handleCancel = () => {
+        if (saving) return;
+        if (pendingRows.length > 0 && !window.confirm("Cancel preview? Unsaved rows will be discarded.")) {
+            return;
+        }
+        onClose();
+    };
+
     return (
         <div className={inline ? "excel-preview-inline" : "modal-overlay"}>
             <div className={inline ? "excel-preview-panel" : "modal request-modal excel-preview-modal"}>
@@ -25,7 +33,9 @@ function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving, inline = fa
                         <p className="eyebrow">Import preview</p>
                         <h2>Review employees</h2>
                     </div>
-                    {!inline && <button type="button" className="icon-close" onClick={onClose} disabled={saving}>×</button>}
+                    <button type="button" className="icon-close" onClick={handleCancel} disabled={saving} aria-label="Cancel preview">
+                        ×
+                    </button>
                 </div>
 
                 {pendingRows.length === 0 ? (
@@ -66,7 +76,9 @@ function ExcelPreviewModal({ rows, onClose, onAdd, onAddAll, saving, inline = fa
                 )}
 
                 <div className="modal-actions table-footer-actions">
-                    <button type="button" className="secondary-btn" onClick={onClose} disabled={saving}>Cancel</button>
+                    <button type="button" className="secondary-btn" onClick={handleCancel} disabled={saving}>
+                        Cancel preview
+                    </button>
                     <button type="button" className="primary-btn" onClick={handleAddAll} disabled={!pendingRows.length || saving}>
                         {saving ? "Adding..." : "Add All"}
                     </button>

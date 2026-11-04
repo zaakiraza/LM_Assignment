@@ -2,13 +2,16 @@ import { GoogleLogin } from "@react-oauth/google";
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 function Login() {
     const auth = useAuth();
+    const toast = useToast();
     const [error, setError] = useState("");
 
     if (auth.loading) {
-        return <div className="panel-state"><h2>Loading...</h2></div>;
+        return <LoadingSpinner fullPage label="Loading..." />;
     }
 
     if (auth.isAuthenticated) {
@@ -44,6 +47,7 @@ function Login() {
                             try {
                                 setError("");
                                 const user = await auth.loginWithGoogle(response.credential);
+                                toast.success(`Signed in as ${user.name || user.email}`);
                                 if (!user.isVerified) {
                                     window.location.assign("/pending");
                                 }
@@ -55,10 +59,15 @@ function Login() {
                                 }
                             }
                             catch (loginError) {
-                                setError(loginError.response?.data?.message || "Google sign-in failed");
+                                const message = loginError.response?.data?.message || "Google sign-in failed";
+                                setError(message);
+                                toast.error(message);
                             }
                         }}
-                        onError={() => setError("Google sign-in was cancelled or failed")}
+                        onError={() => {
+                            setError("Google sign-in was cancelled or failed");
+                            toast.error("Google sign-in was cancelled or failed");
+                        }}
                         useOneTap={false}
                     />
                 </div>

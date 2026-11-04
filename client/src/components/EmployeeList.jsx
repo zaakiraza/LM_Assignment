@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import EmployeeService from "../services/employeeService";
 import AssignmentService from "../services/assignmentService";
 import ViewLMModal from "./ViewLMModal";
 import EditEmployeeModal from "./EditEmployeeModal";
+import LoadingSpinner from "./LoadingSpinner";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 function getSkillsText(employee) {
     if (Array.isArray(employee.skills)) {
@@ -38,8 +41,17 @@ function FilterIcon() {
     );
 }
 
-function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
+function EmployeeList({
+    onRequestRefresh,
+    refreshKey,
+    criteria,
+    canAddEmployees = false,
+    onAddEmployees,
+    importRows = [],
+    onImportRowsChange
+}) {
     const auth = useAuth();
+    const toast = useToast();
     const canManage = auth.isHR;
     const [employees, setEmployees] = useState([]);
     const [assignments, setAssignments] = useState({});
@@ -50,14 +62,24 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [assigneeView, setAssigneeView] = useState(null);
     const [openActionMenu, setOpenActionMenu] = useState(null);
+    const [menuPosition, setMenuPosition] = useState(null);
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const [nameQuery, setNameQuery] = useState("");
-    const [selectedDepartment, setSelectedDepartment] = useState("all");
-    const [selectedPosition, setSelectedPosition] = useState("all");
+    const emptyFilters = {
+        nameQuery: "",
+        selectedDepartment: "all",
+        selectedPosition: "all",
+        minExperience: "",
+        maxExperience: "",
+        skillQuery: ""
+    };
+    const [draftFilters, setDraftFilters] = useState(emptyFilters);
+    const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
     const [currentPage, setCurrentPage] = useState(1);
-    const [viewMode, setViewMode] = useState("cards");
+    const [assignmentFilter, setAssignmentFilter] = useState("all");
+    const [importSaving, setImportSaving] = useState(false);
     const filtersRef = useRef(null);
     const employeesPerPage = 10;
+    const isImportMode = importRows.length > 0;
 
     const fetchData = async () => {
         try {
@@ -97,26 +119,56 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
         fetchData();
     }, [refreshKey, canManage]);
 
+    const sourceEmployees = isImportMode ? importRows : employees;
     const departments = [...new Set(employees.map((employee) => employee.department).filter(Boolean))].sort();
     const positions = [...new Set(employees.map((employee) => employee.position).filter(Boolean))].sort();
-    const normalizedQuery = nameQuery.trim().toLowerCase();
-    const filteredEmployees = employees.filter((employee) => (
-        (selectedDepartment === "all" || employee.department === selectedDepartment) &&
-        (selectedPosition === "all" || employee.position === selectedPosition) &&
-        (!normalizedQuery || (employee.name || "").toLowerCase().includes(normalizedQuery))
-    ));
+    const normalizedQuery = appliedFilters.nameQuery.trim().toLowerCase();
+    const normalizedSkill = appliedFilters.skillQuery.trim().toLowerCase();
+    const minExp = appliedFilters.minExperience === "" ? null : Number(appliedFilters.minExperience);
+    const maxExp = appliedFilters.maxExperience === "" ? null : Number(appliedFilters.maxExperience);
+
+    const filteredEmployees = sourceEmployees.filter((employee) => {
+        if (isImportMode) {
+            return (
+                (!normalizedQuery || (employee.name || "").toLowerCase().includes(normalizedQuery))
+                && (appliedFilters.selectedDepartment === "all" || employee.department === appliedFilters.selectedDepartment)
+                && (appliedFilters.selectedPosition === "all" || employee.position === appliedFilters.selectedPosition)
+            );
+        }
+
+        const experience = Number(employee.experience) || 0;
+        const skillsText = getSkillsText(employee).toLowerCase();
+        const isAssigned = Boolean(assignments[employee.id]);
+
+        return (
+            (appliedFilters.selectedDepartment === "all" || employee.department === appliedFilters.selectedDepartment)
+            && (appliedFilters.selectedPosition === "all" || employee.position === appliedFilters.selectedPosition)
+            && (!normalizedQuery || (employee.name || "").toLowerCase().includes(normalizedQuery))
+            && (minExp === null || Number.isNaN(minExp) || experience >= minExp)
+            && (maxExp === null || Number.isNaN(maxExp) || experience <= maxExp)
+            && (!normalizedSkill || skillsText.includes(normalizedSkill))
+            && (assignmentFilter === "all"
+                || (assignmentFilter === "assigned" && isAssigned)
+                || (assignmentFilter === "unassigned" && !isAssigned))
+        );
+    });
+
     const activeFilterCount = [
-        nameQuery.trim() ? 1 : 0,
-        selectedDepartment !== "all" ? 1 : 0,
-        selectedPosition !== "all" ? 1 : 0
+        appliedFilters.nameQuery.trim() ? 1 : 0,
+        appliedFilters.selectedDepartment !== "all" ? 1 : 0,
+        appliedFilters.selectedPosition !== "all" ? 1 : 0,
+        appliedFilters.minExperience !== "" ? 1 : 0,
+        appliedFilters.maxExperience !== "" ? 1 : 0,
+        appliedFilters.skillQuery.trim() ? 1 : 0
     ].reduce((sum, value) => sum + value, 0);
+
     const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / employeesPerPage));
     const pageStart = (currentPage - 1) * employeesPerPage;
     const visibleEmployees = filteredEmployees.slice(pageStart, pageStart + employeesPerPage);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedDepartment, selectedPosition, nameQuery, viewMode]);
+    }, [appliedFilters, assignmentFilter]);
 
     useEffect(() => {
         if (currentPage > totalPages) {
@@ -137,11 +189,49 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
         return () => window.removeEventListener("pointerdown", onPointerDown);
     }, [filtersOpen]);
 
-    const clearFilters = () => {
-        setNameQuery("");
-        setSelectedDepartment("all");
-        setSelectedPosition("all");
+    useEffect(() => {
+        if (!openActionMenu) return undefined;
+
+        const closeMenu = () => {
+            setOpenActionMenu(null);
+            setMenuPosition(null);
+        };
+
+        const onScrollOrResize = () => closeMenu();
+        const onPointerDown = (event) => {
+            if (event.target.closest?.(".action-menu") || event.target.closest?.(".menu-btn")) return;
+            closeMenu();
+        };
+
+        window.addEventListener("scroll", onScrollOrResize, true);
+        window.addEventListener("resize", onScrollOrResize);
+        window.addEventListener("pointerdown", onPointerDown);
+        return () => {
+            window.removeEventListener("scroll", onScrollOrResize, true);
+            window.removeEventListener("resize", onScrollOrResize);
+            window.removeEventListener("pointerdown", onPointerDown);
+        };
+    }, [openActionMenu]);
+
+    const updateDraft = (key, value) => {
+        setDraftFilters((current) => ({ ...current, [key]: value }));
+    };
+
+    const applyFilters = () => {
+        setAppliedFilters(draftFilters);
         setCurrentPage(1);
+        setFiltersOpen(false);
+    };
+
+    const clearFilters = () => {
+        setDraftFilters(emptyFilters);
+        setAppliedFilters(emptyFilters);
+        setCurrentPage(1);
+    };
+
+    const openFilters = () => {
+        setDraftFilters(appliedFilters);
+        setFiltersOpen((current) => !current);
     };
 
     const handleSeeAssignees = async (employee) => {
@@ -176,13 +266,17 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
     };
 
     const handleRequestLM = async (employee) => {
+        if (!window.confirm(`Create an LM request for ${employee.name}?`)) return;
         try {
             await AssignmentService.createAssignment(employee.id, null, criteria);
+            toast.success(`LM request created for ${employee.name}`);
             await fetchData();
             onRequestRefresh?.();
         }
         catch (requestError) {
-            setError(requestError.response?.data?.message || "Failed to create LM request");
+            const message = requestError.response?.data?.message || "Failed to create LM request";
+            setError(message);
+            toast.error(message);
         }
     };
 
@@ -193,11 +287,14 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
 
         try {
             await AssignmentService.cancelPendingAssignment(request.assignmentId);
+            toast.success(`LM request undone for ${employee.name}`);
             await fetchData();
             onRequestRefresh?.();
         }
         catch (cancelError) {
-            setError(cancelError.response?.data?.message || "Failed to undo LM request");
+            const message = cancelError.response?.data?.message || "Failed to undo LM request";
+            setError(message);
+            toast.error(message);
         }
     };
 
@@ -206,24 +303,123 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
         if (!confirmed) return;
         try {
             await EmployeeService.deleteEmployee(employee.id);
+            toast.success(`${employee.name} deleted`);
             await fetchData();
             onRequestRefresh?.();
         }
         catch (deleteError) {
             console.error(deleteError);
-            setError(deleteError.response?.data?.message || "Failed to delete employee");
+            const message = deleteError.response?.data?.message || "Failed to delete employee";
+            setError(message);
+            toast.error(message);
         }
     };
 
+    const cancelImport = () => {
+        if (importSaving) return;
+        if (importRows.length > 0 && !window.confirm("Cancel Excel import? Unsaved rows will be discarded.")) {
+            return;
+        }
+        onImportRowsChange?.([]);
+        toast.info("Excel import cancelled");
+    };
+
+    const addImportRow = async (row) => {
+        try {
+            setImportSaving(true);
+            const { _rowId, ...payload } = row;
+            await EmployeeService.createEmployee({
+                ...payload,
+                experience: Number(payload.experience) || 0,
+                employeeManaged: 0,
+                isVerified: true
+            });
+            onImportRowsChange?.(importRows.filter((item) => item._rowId !== row._rowId));
+            toast.success(`${row.name || "Employee"} added`);
+            await fetchData();
+            onRequestRefresh?.();
+        }
+        catch (saveError) {
+            const message = saveError.response?.data?.message || "Failed to add employee";
+            setError(message);
+            toast.error(message);
+        }
+        finally {
+            setImportSaving(false);
+        }
+    };
+
+    const addAllImportRows = async () => {
+        if (!importRows.length) return;
+        if (!window.confirm(`Add all ${importRows.length} employee(s) from this Excel import?`)) return;
+
+        try {
+            setImportSaving(true);
+            await EmployeeService.createEmployees(importRows.map(({ _rowId, ...employee }) => ({
+                ...employee,
+                experience: Number(employee.experience) || 0,
+                employeeManaged: 0,
+                isVerified: true
+            })));
+            const count = importRows.length;
+            onImportRowsChange?.([]);
+            toast.success(`${count} employee(s) added`);
+            await fetchData();
+            onRequestRefresh?.();
+        }
+        catch (saveError) {
+            const message = saveError.response?.data?.message || "Failed to add employees";
+            setError(message);
+            toast.error(message);
+        }
+        finally {
+            setImportSaving(false);
+        }
+    };
+
+    const discardImportRow = (row) => {
+        onImportRowsChange?.(importRows.filter((item) => item._rowId !== row._rowId));
+    };
+
+    const closeActionMenu = () => {
+        setOpenActionMenu(null);
+        setMenuPosition(null);
+    };
+
+    const toggleActionMenu = (employeeId, event) => {
+        event.stopPropagation();
+        if (openActionMenu === employeeId) {
+            closeActionMenu();
+            return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const menuWidth = 180;
+        const estimatedHeight = 220;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const openUp = spaceBelow < estimatedHeight && rect.top > estimatedHeight;
+        const left = Math.min(
+            Math.max(12, rect.right - menuWidth),
+            window.innerWidth - menuWidth - 12
+        );
+
+        setMenuPosition({
+            top: openUp ? rect.top - 8 : rect.bottom + 8,
+            left,
+            openUp
+        });
+        setOpenActionMenu(employeeId);
+    };
+
     if (loading) {
-        return <div className="panel-state"><h2>Loading employees...</h2></div>;
+        return <LoadingSpinner label="Loading employees..." />;
     }
 
     if (error && employees.length === 0) {
         return <div className="panel-state error"><h2>{error}</h2></div>;
     }
 
-    const renderActions = (employee, assignment, pendingRequest, isLineManager) => {
+    const renderActions = (employee) => {
         if (!canManage) return null;
         return (
             <div className="employee-action-menu">
@@ -232,57 +428,56 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                     className="menu-btn"
                     aria-label={`Open actions for ${employee.name}`}
                     aria-expanded={openActionMenu === employee.id}
-                    onClick={() => setOpenActionMenu((current) => current === employee.id ? null : employee.id)}
+                    onClick={(event) => toggleActionMenu(employee.id, event)}
                 >
                     <span aria-hidden="true">⋮</span>
                 </button>
-
-                {openActionMenu === employee.id && (
-                    <div className="action-menu" role="menu">
-                        {assignment ? (
-                            <button type="button" className="action-menu-item" onClick={() => { setViewEmployee(employee); setOpenActionMenu(null); }}>
-                                View LM
-                            </button>
-                        ) : pendingRequest ? (
-                            <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleUndoRequest(employee); setOpenActionMenu(null); }}>
-                                Undo request
-                            </button>
-                        ) : (
-                            <button type="button" className="action-menu-item action-menu-primary" onClick={() => { handleRequestLM(employee); setOpenActionMenu(null); }}>
-                                Request LM
-                            </button>
-                        )}
-                        <button type="button" className="action-menu-item" onClick={() => { handleEditEmployee(employee); setOpenActionMenu(null); }}>
-                            Edit
-                        </button>
-                        <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleDeleteEmployee(employee); setOpenActionMenu(null); }}>
-                            Delete
-                        </button>
-                        {isLineManager && (
-                            <button type="button" className="action-menu-item" onClick={() => { handleSeeAssignees(employee); setOpenActionMenu(null); }}>
-                                See Assignees
-                            </button>
-                        )}
-                    </div>
-                )}
             </div>
         );
     };
 
+    const openMenuEmployee = employees.find((employee) => employee.id === openActionMenu);
+    const openMenuAssignment = openMenuEmployee ? assignments[openMenuEmployee.id] : null;
+    const openMenuPending = openMenuEmployee ? pendingRequests[openMenuEmployee.id] : null;
+    const openMenuIsLM = openMenuEmployee
+        ? criteria.allowedDesignations.includes(openMenuEmployee.position)
+        : false;
+
     return (
         <div className="employee-list-section">
-            <p className="eyebrow">Team roster</p>
+            <p className="eyebrow">{isImportMode ? "Excel import" : "Team roster"}</p>
 
             <div className="section-header roster-header">
                 <div>
-                    <h2>Employees</h2>
+                    <h2>{isImportMode ? "Review import" : "Employees"}</h2>
                 </div>
                 <div className="roster-header-actions">
+                    {isImportMode ? (
+                        <>
+                            <button
+                                type="button"
+                                className="secondary-btn small-btn"
+                                onClick={cancelImport}
+                                disabled={importSaving}
+                            >
+                                Cancel import
+                            </button>
+                            <button
+                                type="button"
+                                className="primary-btn small-btn"
+                                onClick={addAllImportRows}
+                                disabled={importSaving || importRows.length === 0}
+                            >
+                                {importSaving ? "Adding..." : "Add all"}
+                            </button>
+                        </>
+                    ) : (
+                    <>
                     <div className="roster-filters" ref={filtersRef}>
                         <button
                             type="button"
                             className={`roster-filter-btn${filtersOpen || activeFilterCount > 0 ? " active" : ""}`}
-                            onClick={() => setFiltersOpen((current) => !current)}
+                            onClick={openFilters}
                             aria-expanded={filtersOpen}
                             aria-label="Open filters"
                             title="Filters"
@@ -301,7 +496,13 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                         type="button"
                                         className="text-btn"
                                         onClick={clearFilters}
-                                        disabled={activeFilterCount === 0}
+                                        disabled={activeFilterCount === 0
+                                            && !draftFilters.nameQuery
+                                            && draftFilters.selectedDepartment === "all"
+                                            && draftFilters.selectedPosition === "all"
+                                            && draftFilters.minExperience === ""
+                                            && draftFilters.maxExperience === ""
+                                            && !draftFilters.skillQuery}
                                     >
                                         Clear
                                     </button>
@@ -311,8 +512,8 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                     <span className="meta-label">Search by name</span>
                                     <input
                                         type="search"
-                                        value={nameQuery}
-                                        onChange={(event) => setNameQuery(event.target.value)}
+                                        value={draftFilters.nameQuery}
+                                        onChange={(event) => updateDraft("nameQuery", event.target.value)}
                                         placeholder="Type an employee name..."
                                         autoFocus
                                     />
@@ -322,8 +523,8 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                     <span className="meta-label">Department</span>
                                     <select
                                         className="department-filter"
-                                        value={selectedDepartment}
-                                        onChange={(event) => setSelectedDepartment(event.target.value)}
+                                        value={draftFilters.selectedDepartment}
+                                        onChange={(event) => updateDraft("selectedDepartment", event.target.value)}
                                         aria-label="Filter employees by department"
                                     >
                                         <option value="all">All departments</option>
@@ -337,8 +538,8 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                     <span className="meta-label">Position</span>
                                     <select
                                         className="department-filter"
-                                        value={selectedPosition}
-                                        onChange={(event) => setSelectedPosition(event.target.value)}
+                                        value={draftFilters.selectedPosition}
+                                        onChange={(event) => updateDraft("selectedPosition", event.target.value)}
                                         aria-label="Filter employees by position"
                                     >
                                         <option value="all">All positions</option>
@@ -347,147 +548,176 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                                         ))}
                                     </select>
                                 </label>
+
+                                <div className="roster-filter-row">
+                                    <label className="roster-filter-field">
+                                        <span className="meta-label">Min experience</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={draftFilters.minExperience}
+                                            onChange={(event) => updateDraft("minExperience", event.target.value)}
+                                            placeholder="0"
+                                        />
+                                    </label>
+                                    <label className="roster-filter-field">
+                                        <span className="meta-label">Max experience</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={draftFilters.maxExperience}
+                                            onChange={(event) => updateDraft("maxExperience", event.target.value)}
+                                            placeholder="Any"
+                                        />
+                                    </label>
+                                </div>
+
+                                <label className="roster-filter-field">
+                                    <span className="meta-label">Skills</span>
+                                    <input
+                                        type="search"
+                                        value={draftFilters.skillQuery}
+                                        onChange={(event) => updateDraft("skillQuery", event.target.value)}
+                                        placeholder="e.g. React"
+                                    />
+                                </label>
+
+                                <button type="button" className="primary-btn full" onClick={applyFilters}>
+                                    Apply filters
+                                </button>
                             </div>
                         )}
                     </div>
 
-                    <div className="view-toggle" role="group" aria-label="Employee view mode">
+                    <div className="view-toggle" role="group" aria-label="Assignment status filter">
                         <button
                             type="button"
-                            className={`view-toggle-btn${viewMode === "cards" ? " active" : ""}`}
-                            onClick={() => setViewMode("cards")}
+                            className={`view-toggle-btn${assignmentFilter === "all" ? " active" : ""}`}
+                            onClick={() => setAssignmentFilter("all")}
                         >
-                            Cards
+                            All
                         </button>
                         <button
                             type="button"
-                            className={`view-toggle-btn${viewMode === "table" ? " active" : ""}`}
-                            onClick={() => setViewMode("table")}
+                            className={`view-toggle-btn${assignmentFilter === "assigned" ? " active" : ""}`}
+                            onClick={() => setAssignmentFilter("assigned")}
                         >
-                            Table
+                            Assigned
+                        </button>
+                        <button
+                            type="button"
+                            className={`view-toggle-btn${assignmentFilter === "unassigned" ? " active" : ""}`}
+                            onClick={() => setAssignmentFilter("unassigned")}
+                        >
+                            Unassigned
                         </button>
                     </div>
-                    <span className="counter-pill">
-                        {filteredEmployees.length === employees.length
-                            ? `${employees.length} total`
-                            : `${filteredEmployees.length} / ${employees.length} total`}
-                    </span>
+                    {canAddEmployees && (
+                        <button
+                            type="button"
+                            className="primary-btn small-btn"
+                            onClick={onAddEmployees}
+                        >
+                            Add employees
+                        </button>
+                    )}
+                    </>
+                    )}
                 </div>
+
             </div>
 
             {error && <p className="modal-message error">{error}</p>}
 
             <div className="employee-list-scroll">
-                {viewMode === "cards" ? (
-                    <div className="employee-list">
-                        {visibleEmployees.map((employee) => {
-                            const assignment = assignments[employee.id];
-                            const pendingRequest = pendingRequests[employee.id];
-                            const isLineManager = criteria.allowedDesignations.includes(employee.position);
-                            const skills = getSkillsText(employee);
-
-                            return (
-                                <article key={employee.id} className="employee-card">
-                                    <div className="employee-card-header">
-                                        <div>
-                                            <p className="mini-label">Employee</p>
-                                            <h3>{employee.name}</h3>
-                                        </div>
-                                        <span className={`status-badge ${assignment ? "assigned" : pendingRequest ? "pending" : "open"}`}>
-                                            {assignment ? "Assigned" : pendingRequest ? "Requested" : "Open"}
-                                        </span>
-                                    </div>
-
-                                    <div className="employee-grid">
-                                        <div>
-                                            <span className="meta-label">Position</span>
-                                            <strong>{employee.position}</strong>
-                                        </div>
-                                        <div>
-                                            <span className="meta-label">Experience</span>
-                                            <strong>{employee.experience} yrs</strong>
-                                        </div>
-                                        <div>
-                                            <span className="meta-label">Department</span>
-                                            <strong>{employee.department}</strong>
-                                        </div>
-                                        <div>
-                                            <span className="meta-label">Managed</span>
-                                            <strong>{employee.employeeManaged ?? 0}</strong>
-                                        </div>
-                                        {assignment?.lineManagerName && (
-                                            <div className="employee-grid-span">
-                                                <span className="meta-label">Line manager</span>
-                                                <strong>{assignment.lineManagerName}</strong>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="skills-box">
-                                        <span className="meta-label">Skills</span>
-                                        <p>{skills || "—"}</p>
-                                    </div>
-
-                                    {canManage && (
-                                        <div className="employee-card-actions">
-                                            {renderActions(employee, assignment, pendingRequest, isLineManager)}
-                                        </div>
-                                    )}
-                                </article>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    <div className="employee-table-wrap">
-                        <table className="employee-table">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Position</th>
-                                    <th>Department</th>
-                                    <th>Experience</th>
-                                    <th>Managed</th>
-                                    <th>Line manager</th>
-                                    <th>Status</th>
-                                    <th>Skills</th>
-                                    {canManage && <th>Actions</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {visibleEmployees.map((employee) => {
-                                    const assignment = assignments[employee.id];
-                                    const pendingRequest = pendingRequests[employee.id];
-                                    const isLineManager = criteria.allowedDesignations.includes(employee.position);
+                <div className="employee-table-wrap">
+                    <table className="employee-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Position</th>
+                                <th>Department</th>
+                                <th>Experience</th>
+                                <th>Managed</th>
+                                <th>Line manager</th>
+                                <th>Status</th>
+                                <th>Skills</th>
+                                {(canManage || isImportMode) && <th>Actions</th>}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {visibleEmployees.map((employee) => {
+                                if (isImportMode) {
                                     const skills = getSkillsText(employee);
-                                    const status = assignment ? "Assigned" : pendingRequest ? "Requested" : "Open";
-                                    const statusClass = assignment ? "assigned" : pendingRequest ? "pending" : "open";
-
                                     return (
-                                        <tr key={employee.id}>
+                                        <tr key={employee._rowId}>
                                             <td>
                                                 <strong>{employee.name}</strong>
                                             </td>
                                             <td>{employee.position}</td>
                                             <td>{employee.department}</td>
                                             <td>{employee.experience} yrs</td>
-                                            <td>{employee.employeeManaged ?? 0}</td>
-                                            <td>{assignment?.lineManagerName || "—"}</td>
+                                            <td>—</td>
+                                            <td>—</td>
                                             <td>
-                                                <span className={`status-badge ${statusClass}`}>{status}</span>
+                                                <span className="status-badge pending">Import</span>
                                             </td>
                                             <td className="skills-cell">{skills || "—"}</td>
-                                            {canManage && (
-                                                <td className="actions-cell">
-                                                    {renderActions(employee, assignment, pendingRequest, isLineManager)}
-                                                </td>
-                                            )}
+                                            <td className="actions-cell">
+                                                <div className="import-row-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="primary-btn small-btn"
+                                                        disabled={importSaving}
+                                                        onClick={() => addImportRow(employee)}
+                                                    >
+                                                        Add
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="secondary-btn small-btn"
+                                                        disabled={importSaving}
+                                                        onClick={() => discardImportRow(employee)}
+                                                    >
+                                                        Discard
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                }
+
+                                const assignment = assignments[employee.id];
+                                const pendingRequest = pendingRequests[employee.id];
+                                const skills = getSkillsText(employee);
+                                const status = assignment ? "Assigned" : pendingRequest ? "Requested" : "Open";
+                                const statusClass = assignment ? "assigned" : pendingRequest ? "pending" : "open";
+
+                                return (
+                                    <tr key={employee.id}>
+                                        <td>
+                                            <strong>{employee.name}</strong>
+                                        </td>
+                                        <td>{employee.position}</td>
+                                        <td>{employee.department}</td>
+                                        <td>{employee.experience} yrs</td>
+                                        <td>{employee.employeeManaged ?? 0}</td>
+                                        <td>{assignment?.lineManagerName || "—"}</td>
+                                        <td>
+                                            <span className={`status-badge ${statusClass}`}>{status}</span>
+                                        </td>
+                                        <td className="skills-cell">{skills || "—"}</td>
+                                        {canManage && (
+                                            <td className="actions-cell">
+                                                {renderActions(employee)}
+                                            </td>
+                                        )}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
 
                 {filteredEmployees.length === 0 && (
                     <div className="empty-state employee-filter-empty">
@@ -496,26 +726,73 @@ function EmployeeList({ onRequestRefresh, refreshKey, criteria }) {
                 )}
             </div>
 
-            {filteredEmployees.length > employeesPerPage && (
-                <div className="pagination-controls" aria-label="Employee pagination">
-                    <button
-                        type="button"
-                        className="secondary-btn small-btn"
-                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                        disabled={currentPage === 1}
-                    >
-                        Previous
+            <div className="pagination-controls" aria-label="Employee pagination">
+                <button
+                    type="button"
+                    className="secondary-btn small-btn"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage === 1 || totalPages <= 1}
+                >
+                    Previous
+                </button>
+                <span className="pagination-meta">
+                    {filteredEmployees.length > employeesPerPage
+                        ? `Page ${currentPage} of ${totalPages}`
+                        : "Page 1 of 1"}
+                </span>
+                <button
+                    type="button"
+                    className="secondary-btn small-btn"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={currentPage === totalPages || totalPages <= 1}
+                >
+                    Next
+                </button>
+                <span className="counter-pill">
+                    {isImportMode
+                        ? `${importRows.length} import row${importRows.length === 1 ? "" : "s"}`
+                        : filteredEmployees.length === employees.length
+                            ? `${employees.length} total`
+                            : `${filteredEmployees.length} / ${employees.length} total`}
+                </span>
+            </div>
+
+            {openMenuEmployee && menuPosition && createPortal(
+                <div
+                    className={`action-menu action-menu-fixed${menuPosition.openUp ? " open-up" : ""}`}
+                    role="menu"
+                    style={{
+                        top: menuPosition.openUp ? "auto" : menuPosition.top,
+                        bottom: menuPosition.openUp ? window.innerHeight - menuPosition.top : "auto",
+                        left: menuPosition.left
+                    }}
+                >
+                    {openMenuAssignment ? (
+                        <button type="button" className="action-menu-item" onClick={() => { setViewEmployee(openMenuEmployee); closeActionMenu(); }}>
+                            View LM
+                        </button>
+                    ) : openMenuPending ? (
+                        <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleUndoRequest(openMenuEmployee); closeActionMenu(); }}>
+                            Undo request
+                        </button>
+                    ) : (
+                        <button type="button" className="action-menu-item action-menu-primary" onClick={() => { handleRequestLM(openMenuEmployee); closeActionMenu(); }}>
+                            Request LM
+                        </button>
+                    )}
+                    <button type="button" className="action-menu-item" onClick={() => { handleEditEmployee(openMenuEmployee); closeActionMenu(); }}>
+                        Edit
                     </button>
-                    <span>Page {currentPage} of {totalPages}</span>
-                    <button
-                        type="button"
-                        className="secondary-btn small-btn"
-                        onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                        disabled={currentPage === totalPages}
-                    >
-                        Next
+                    <button type="button" className="action-menu-item action-menu-danger" onClick={() => { handleDeleteEmployee(openMenuEmployee); closeActionMenu(); }}>
+                        Delete
                     </button>
-                </div>
+                    {openMenuIsLM && (
+                        <button type="button" className="action-menu-item" onClick={() => { handleSeeAssignees(openMenuEmployee); closeActionMenu(); }}>
+                            See Assignees
+                        </button>
+                    )}
+                </div>,
+                document.body
             )}
 
             {editingEmployee && (

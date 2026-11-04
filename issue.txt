@@ -1,0 +1,15 @@
+Issues:
+1. when importing excel file there should be validation that how the columns that we needed is there or not is even single column was not there show error.
+2. There should be limit in size when excel file is uploading.
+3. At every actions there should be a proper response message what user has done like when logins, logout, add/edit/delete/update user and same for othere operation.
+4. There should be option of cancel preview and preview should not come unless the data should not upload properly.
+5. On every strict action there should be confirmation.
+6. when adding single employee skill should same as on request page when add skills and hit enter the skill show above input feild not add by comma seperated.
+7. The filter should also show experience, skills and filter should not apply on onchange event there should be option apply then the filter applies.
+8. The scroll issue there are scroll issue at every page the content is hidden somewhere due to overlay at some places the button are hidden and no overscroll scroll was there.
+9. add lader spinner every where user has to wait on page loading, data laoding etc.
+
+New Features:
+10. merger Import tab into employees tab and show one single button at top add employees inside that show single employee or bulk import then do acc to it.
+11. Add more tab like feedback for app, LM feedback, LM meetings
+12. Add email service when employee added, assigned LM, unAssined means when the major event happend email generates.

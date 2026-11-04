@@ -208,6 +208,7 @@ button {
   max-height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-content > .panel,
@@ -219,7 +220,11 @@ button {
   max-height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 28px;
 }
 
 .app-status {
@@ -503,14 +508,15 @@ button {
   top: calc(100% + 10px);
   right: 0;
   z-index: 40;
-  width: min(280px, calc(100vw - 48px));
+  width: min(380px, calc(100vw - 40px));
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--card);
   box-shadow: var(--shadow);
+  font-size: 0.78rem;
 }
 
 .roster-filter-panel-head {
@@ -522,29 +528,102 @@ button {
 
 .roster-filter-panel-head h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
 }
 
 .roster-filter-field {
   display: grid;
+  gap: 4px;
+}
+
+.roster-filter-field .meta-label {
+  font-size: 0.62rem;
+}
+
+.roster-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.employees-page {
+  gap: 16px;
+}
+
+.modal.add-employees-modal {
+  width: min(30vw, 420px);
+  min-width: min(100%, 280px);
+  max-height: min(80vh, 560px);
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.add-employees-modal .modal-head h2 {
+  margin: 4px 0 0;
+  font-size: 1.2rem;
+}
+
+.add-employees-modal .page-description {
+  margin-top: 6px;
+  max-width: none;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.add-employees-modal .intake-options {
+  margin-top: 0;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.add-employees-modal .intake-option {
+  padding: 14px;
   gap: 6px;
+}
+
+.add-employees-modal .intake-option h3 {
+  font-size: 0.95rem;
+}
+
+.add-employees-modal .intake-option p:not(.mini-label) {
+  font-size: 0.78rem;
+}
+
+.add-employees-modal .primary-btn,
+.add-employees-modal .secondary-btn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 0.82rem;
+}
+
+.primary-btn.full,
+.secondary-btn.full {
+  width: 100%;
 }
 
 .roster-filter-field input,
 .roster-filter-panel .department-filter {
   width: 100%;
   min-width: 0;
-  height: 40px;
-  padding: 0 12px;
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid rgba(31, 61, 54, 0.16);
-  border-radius: 11px;
+  border-radius: 10px;
   background: var(--panel);
   color: var(--text);
+  font-size: 0.78rem;
   font-weight: 600;
 }
 
 .roster-filter-panel .department-filter {
-  padding-right: 32px;
+  padding-right: 28px;
+}
+
+.roster-filter-panel .primary-btn {
+  height: 36px;
+  font-size: 0.8rem;
 }
 
 .text-btn {
@@ -598,16 +677,18 @@ button {
 }
 
 .employee-table-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: visible;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--card);
 }
 
 .employee-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
-  min-width: 780px;
+  table-layout: auto;
   font-size: 0.8rem;
 }
 
@@ -617,18 +698,28 @@ button {
   text-align: left;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .employee-table th {
   position: sticky;
   top: 0;
   background: var(--panel-alt);
-  color: var(--muted);
-  font-size: 0.65rem;
+  color: var(--text);
+  font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 800;
   z-index: 1;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  line-height: 1.3;
+  border-bottom: 2px solid var(--primary);
+  border-right: 1px solid rgba(31, 61, 54, 0.18);
+}
+
+.employee-table th:last-child {
+  border-right: 0;
 }
 
 .employee-table td strong {
@@ -646,14 +737,28 @@ button {
 }
 
 .employee-table .skills-cell {
-  max-width: 220px;
+  max-width: none;
   color: var(--muted);
   font-size: 0.76rem;
-  line-height: 1.35;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .employee-table .actions-cell {
   width: 64px;
+  position: relative;
+  overflow: visible;
+}
+
+.import-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-row-actions .small-btn {
+  width: auto;
+  white-space: nowrap;
 }
 
 .panel-side {
@@ -770,11 +875,17 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   margin-top: 22px;
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 700;
+}
+
+.pagination-meta {
+  min-width: 96px;
+  text-align: center;
 }
 
 .employee-card,
@@ -917,6 +1028,13 @@ button {
   border-radius: 12px;
   background: var(--card);
   box-shadow: 0 14px 30px rgba(13, 29, 24, 0.16);
+}
+
+.action-menu-fixed {
+  position: fixed;
+  right: auto;
+  bottom: auto;
+  z-index: 1600;
 }
 
 .action-menu-item {
@@ -2085,4 +2203,129 @@ button {
   .secondary-btn {
     width: 100%;
   }
+}
+
+.toast-stack {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1400;
+  display: grid;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.toast-success {
+  border-color: #c9db9d;
+  background: #f4f9e8;
+  color: var(--success);
+}
+
+.toast-error {
+  border-color: #f0c2bb;
+  background: #fff5f3;
+  color: var(--danger);
+}
+
+.toast-info {
+  border-color: #c9d5d1;
+  background: #f3f7f5;
+  color: var(--primary);
+}
+
+.toast-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+}
+
+.loading-spinner {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  padding: 28px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.loading-spinner.full-page {
+  min-height: calc(100vh - 80px);
+}
+
+.loading-spinner.compact {
+  padding: 16px;
+}
+
+.loading-spinner p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.spinner-ring {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(31, 61, 54, 0.15);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.import-btn.disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.excel-preview-inline {
+  margin-top: 22px;
+  min-height: 0;
+}
+
+.excel-preview-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.excel-preview-panel .request-table-wrap {
+  max-height: min(420px, 50vh);
+  overflow: auto;
+}
+
+.table-footer-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: linear-gradient(180deg, transparent, var(--card) 28%);
 }
