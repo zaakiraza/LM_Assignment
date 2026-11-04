@@ -3,6 +3,11 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
 const ICONS = {
+    dashboard: (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M4 4h7v9H4V4Zm2 2v5h3V6H6Zm7-2h7v5h-7V4Zm2 2v1h3V6h-3Zm-2 5h7v9h-7v-9Zm2 2v5h3v-5h-3ZM4 15h7v5H4v-5Zm2 2v1h3v-1H6Z" />
+        </svg>
+    ),
     employees: (
         <svg viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M9 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm8.5-1a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5ZM3.5 19.5c0-2.9 2.4-4.5 5.5-4.5s5.5 1.6 5.5 4.5V20a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1v-.5Zm11.2-.5c.2-.9.7-1.7 1.4-2.3.9-.7 2.1-1.2 3.4-1.2 2.2 0 3.5 1.1 3.5 3v.5a1 1 0 0 1-1 1h-6.5a1.2 1.2 0 0 1-.8-.5Z" />
@@ -73,6 +78,7 @@ function Sidebar({ collapsed, onToggle }) {
 
     const links = auth.isHR
         ? [
+            { to: "/dashboard", label: "Dashboard", icon: ICONS.dashboard },
             { to: "/employees", label: "Employees", icon: ICONS.employees },
             { to: "/requests", label: "Requests", icon: ICONS.requests },
             { to: "/pending-users", label: "Verify Employees", icon: ICONS.verify },

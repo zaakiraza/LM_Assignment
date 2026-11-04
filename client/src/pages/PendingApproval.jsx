@@ -13,7 +13,7 @@ function PendingApproval() {
     }
 
     if (auth.isActive) {
-        return <Navigate to={auth.isHR ? "/employees" : "/profile"} replace />;
+        return <Navigate to={auth.isHR ? "/dashboard" : "/profile"} replace />;
     }
 
     return (

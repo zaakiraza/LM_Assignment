@@ -52,7 +52,7 @@ function Login() {
                                     window.location.assign("/pending");
                                 }
                                 else if (user.position === "HR") {
-                                    window.location.assign("/employees");
+                                    window.location.assign("/dashboard");
                                 }
                                 else {
                                     window.location.assign("/profile");

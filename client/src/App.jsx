@@ -13,6 +13,7 @@ import PendingUsers from "./pages/PendingUsers";
 import LMMeetings from "./pages/LMMeetings";
 import LMFeedback from "./pages/LMFeedback";
 import AppFeedback from "./pages/AppFeedback";
+import Dashboard from "./pages/Dashboard";
 import FloatingHRChat from "./components/FloatingHRChat";
 import { defaultAssignmentCriteria } from "./config/assignmentCriteria";
 import SettingsService from "./services/settingsService";
@@ -64,6 +65,9 @@ function AppRoutes() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/pending" element={<PendingApproval />} />
 
+                    <Route path="/dashboard" element={
+                        <ProtectedRoute requireHR><Dashboard /></ProtectedRoute>
+                    } />
                     <Route path="/profile" element={
                         <ProtectedRoute><Profile /></ProtectedRoute>
                     } />
@@ -104,7 +108,7 @@ function AppRoutes() {
                         <Navigate to={
                             !auth.isAuthenticated ? "/login"
                                 : auth.isPending ? "/pending"
-                                    : auth.isHR ? "/employees"
+                                    : auth.isHR ? "/dashboard"
                                         : "/profile"
                         } replace />
                     } />
