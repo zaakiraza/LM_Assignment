@@ -2801,6 +2801,147 @@ select.modal-input,
 }
 
 /* ==========================================================================
+   Line manager hub: page tabs, LM card, change box
+   ========================================================================== */
+
+.page-tabs {
+  display: flex;
+  flex-shrink: 0; // never let the page's flex column squash the tab bar
+  gap: 4px;
+  margin: 0 0 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.page-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.page-tab {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 10px 14px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.page-tab::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: -1px;
+  left: 10px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--primary);
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.page-tab:hover {
+  color: var(--text);
+}
+
+.page-tab.active {
+  color: var(--primary);
+}
+
+.page-tab.active::after {
+  transform: scaleX(1);
+}
+
+.page-tab-panel {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Flex-column pages scroll as a whole; their sections must keep their natural
+   height instead of being squashed (scroll containers lose min-height: auto). */
+.feature-page > *,
+.request-page-table > *,
+.employee-list-section > *:not(.employee-list-scroll) {
+  flex-shrink: 0;
+}
+
+.tab-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tab-section-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lm-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lm-profile-head h3 {
+  margin: 2px 0 2px;
+  font-size: 1.2rem;
+}
+
+.lm-profile-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.lm-avatar.large {
+  width: 56px;
+  height: 56px;
+  font-size: 1.3rem;
+}
+
+.lm-profile-skills {
+  margin: 8px 0 0;
+}
+
+.lm-change-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border: 1px solid var(--primary-soft-2);
+  border-radius: var(--radius-lg);
+  background: var(--primary-soft);
+}
+
+.lm-change-box h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.lm-change-box p {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 0.88rem;
+}
+
+.lm-link-card {
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.lm-link-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
    HR dashboard
    ========================================================================== */
 

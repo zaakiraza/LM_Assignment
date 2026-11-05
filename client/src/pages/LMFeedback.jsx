@@ -3,7 +3,7 @@ import FeedbackService from "../services/feedbackService";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useToast } from "../context/ToastContext";
 
-function LMFeedback() {
+function LMFeedback({ embedded = false, canSubmit = true }) {
     const toast = useToast();
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -53,21 +53,33 @@ function LMFeedback() {
 
     if (loading) return <LoadingSpinner label="Loading LM feedback..." />;
 
+    const Wrapper = embedded ? "div" : "section";
+
     return (
-        <section className="panel panel-main feature-page">
-            <p className="eyebrow">Feedback</p>
-            <div className="section-header">
-                <div className="section-heading-block">
-                    <h2>LM feedback</h2>
-                    <p className="page-description">
-                        Share feedback about your line manager. HR and your LM can review submitted notes.
-                    </p>
+        <Wrapper className={embedded ? "feature-page" : "panel panel-main feature-page"}>
+            {embedded ? (
+                <div className="tab-section-head">
+                    <h3>Line manager feedback</h3>
+                    <span className="counter-pill">{rows.length}</span>
                 </div>
-                <span className="counter-pill">{rows.length}</span>
-            </div>
+            ) : (
+                <>
+                    <p className="eyebrow">Feedback</p>
+                    <div className="section-header">
+                        <div className="section-heading-block">
+                            <h2>LM feedback</h2>
+                            <p className="page-description">
+                                Share feedback about your line manager. HR and your LM can review submitted notes.
+                            </p>
+                        </div>
+                        <span className="counter-pill">{rows.length}</span>
+                    </div>
+                </>
+            )}
 
             {error && <p className="modal-message error">{error}</p>}
 
+            {canSubmit && (
             <form className="feature-form" onSubmit={handleSubmit}>
                 <h3>Submit LM feedback</h3>
                 <div className="modal-form-grid">
@@ -101,6 +113,7 @@ function LMFeedback() {
                     </button>
                 </div>
             </form>
+            )}
 
             {rows.length === 0 ? (
                 <div className="empty-state requests-empty">
@@ -129,7 +142,7 @@ function LMFeedback() {
                     ))}
                 </div>
             )}
-        </section>
+        </Wrapper>
     );
 }
 

@@ -300,15 +300,15 @@ function ActivityCard({ engagement, recent }) {
                 </div>
             </header>
             <div className="mini-stats">
-                <Link to="/lm-meetings" className="mini-stat">
+                <Link to="/line-manager?tab=meetings" className="mini-stat">
                     <span>Upcoming meetings</span>
                     <strong>{engagement.upcomingMeetings}</strong>
                 </Link>
-                <Link to="/lm-meetings" className="mini-stat">
+                <Link to="/line-manager?tab=meetings" className="mini-stat">
                     <span>Meetings this month</span>
                     <strong>{engagement.meetingsThisMonth}</strong>
                 </Link>
-                <Link to="/lm-feedback" className="mini-stat">
+                <Link to="/line-manager?tab=feedback" className="mini-stat">
                     <span>Avg. LM rating</span>
                     <strong>{engagement.averageLmRating ?? "—"}{engagement.averageLmRating ? <small> / 5</small> : null}</strong>
                 </Link>

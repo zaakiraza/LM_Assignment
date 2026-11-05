@@ -10,8 +10,7 @@ import PendingApproval from "./pages/PendingApproval";
 import Profile from "./pages/Profile";
 import Assignees from "./pages/Assignees";
 import PendingUsers from "./pages/PendingUsers";
-import LMMeetings from "./pages/LMMeetings";
-import LMFeedback from "./pages/LMFeedback";
+import LineManagerHub from "./pages/LineManagerHub";
 import AppFeedback from "./pages/AppFeedback";
 import Dashboard from "./pages/Dashboard";
 import FloatingHRChat from "./components/FloatingHRChat";
@@ -94,12 +93,11 @@ function AppRoutes() {
                     <Route path="/pending-users" element={
                         <ProtectedRoute requireHR><PendingUsers /></ProtectedRoute>
                     } />
-                    <Route path="/lm-meetings" element={
-                        <ProtectedRoute><LMMeetings /></ProtectedRoute>
+                    <Route path="/line-manager" element={
+                        <ProtectedRoute><LineManagerHub /></ProtectedRoute>
                     } />
-                    <Route path="/lm-feedback" element={
-                        <ProtectedRoute><LMFeedback /></ProtectedRoute>
-                    } />
+                    <Route path="/lm-meetings" element={<Navigate to="/line-manager?tab=meetings" replace />} />
+                    <Route path="/lm-feedback" element={<Navigate to="/line-manager?tab=feedback" replace />} />
                     <Route path="/app-feedback" element={
                         <ProtectedRoute><AppFeedback /></ProtectedRoute>
                     } />

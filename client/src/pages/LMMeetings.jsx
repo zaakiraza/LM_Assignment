@@ -14,7 +14,7 @@ function formatWhen(value) {
     }
 }
 
-function LMMeetings() {
+function LMMeetings({ embedded = false }) {
     const auth = useAuth();
     const toast = useToast();
     const canSchedule = auth.isHR || auth.isLM;
@@ -87,16 +87,27 @@ function LMMeetings() {
 
     if (loading) return <LoadingSpinner label="Loading meetings..." />;
 
+    const Wrapper = embedded ? "div" : "section";
+
     return (
-        <section className="panel panel-main feature-page">
-            <p className="eyebrow">Collaboration</p>
-            <div className="section-header">
-                <div className="section-heading-block">
-                    <h2>LM meetings</h2>
-                    <p className="page-description">Schedule and track 1:1 meetings between line managers and employees.</p>
+        <Wrapper className={embedded ? "feature-page" : "panel panel-main feature-page"}>
+            {embedded ? (
+                <div className="tab-section-head">
+                    <h3>1:1 meetings</h3>
+                    <span className="counter-pill">{meetings.length}</span>
                 </div>
-                <span className="counter-pill">{meetings.length}</span>
-            </div>
+            ) : (
+                <>
+                    <p className="eyebrow">Collaboration</p>
+                    <div className="section-header">
+                        <div className="section-heading-block">
+                            <h2>LM meetings</h2>
+                            <p className="page-description">Schedule and track 1:1 meetings between line managers and employees.</p>
+                        </div>
+                        <span className="counter-pill">{meetings.length}</span>
+                    </div>
+                </>
+            )}
 
             {error && <p className="modal-message error">{error}</p>}
 
@@ -200,7 +211,7 @@ function LMMeetings() {
                     ))}
                 </div>
             )}
-        </section>
+        </Wrapper>
     );
 }
 

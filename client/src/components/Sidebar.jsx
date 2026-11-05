@@ -39,14 +39,9 @@ const ICONS = {
             <path fill="currentColor" d="M8 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Zm8 1a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5ZM3.8 19.5C3.8 16.9 5.9 15 8 15s4.2 1.9 4.2 4.5V20H3.8v-.5Zm9.7-.5c.2-1.1.7-2 1.4-2.7.8-.7 1.9-1.3 3.1-1.3 2 0 3.2 1.1 3.2 3v.5h-7.7V19Z" />
         </svg>
     ),
-    meetings: (
+    lineManager: (
         <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M7 3a1 1 0 0 1 1 1v1h8V4a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1V4a1 1 0 0 1 1-1Zm12 8H5v8h14v-8ZM7 10h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z" />
-        </svg>
-    ),
-    lmFeedback: (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M12 3a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3.1 5.8L17 20l-3.2-1.3A7 7 0 1 1 12 3Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm-2.2 3.2 1.5 1.5 3.3-3.4 1.4 1.4-4.7 4.8-2.9-2.9 1.4-1.4Z" />
+            <path fill="currentColor" d="M9 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm0 9c3.1 0 5.5 1.6 5.5 4.5V19a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-1.5C3.5 14.6 5.9 13 9 13Zm8.6-6.7a1 1 0 0 1 1.4 0l.4.4.4-.4a1 1 0 1 1 1.4 1.4l-.4.4.4.4a1 1 0 1 1-1.4 1.4l-.4-.4-.4.4a1 1 0 1 1-1.4-1.4l.4-.4-.4-.4a1 1 0 0 1 0-1.4ZM16 13h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-3.3c.2-.3.3-.6.3-1v-1.5c0-1.7-.6-3.2-1.6-4.3.2-.1.4-.2.6-.2Z" />
         </svg>
     ),
     appFeedback: (
@@ -81,8 +76,7 @@ function Sidebar({ collapsed, onToggle }) {
     };
 
     const sharedLinks = [
-        { to: "/lm-meetings", label: "LM Meetings", icon: ICONS.meetings },
-        { to: "/lm-feedback", label: "LM Feedback", icon: ICONS.lmFeedback },
+        { to: "/line-manager", label: auth.isHR ? "LM Hub" : "My Line Manager", icon: ICONS.lineManager },
         { to: "/app-feedback", label: "App Feedback", icon: ICONS.appFeedback }
     ];
 

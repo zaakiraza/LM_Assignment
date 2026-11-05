@@ -14,8 +14,20 @@ class AssignmentController {
 
             const position = req.employee.position;
             const selfId = String(req.employee._id);
-            if (!isHR(position) && String(employeeId) !== selfId) {
-                return responseHandler.error(res, "You can only create a request for yourself", 403);
+            if (!isHR(position)) {
+                if (String(employeeId) !== selfId) {
+                    return responseHandler.error(res, "You can only create a request for yourself", 403);
+                }
+                // Employees may only ask to CHANGE an existing LM; first-time assignment is HR's job.
+                const current = await AssignmentService.getEmployeeAssignment(selfId);
+                if (!current) {
+                    return responseHandler.error(res, "Line managers are assigned by HR. You can request a change once you have one.", 403);
+                }
+                if (lineManagerId) {
+                    return responseHandler.error(res, "HR chooses the new line manager for a change request", 403);
+                }
+                const assignment = await AssignmentService.createAssignment(selfId, null);
+                return responseHandler.success(res, assignment, "LM change request created successfully", 201);
             }
 
             const assignment = await AssignmentService.createAssignment(employeeId, lineManagerId, criteria);
@@ -64,8 +76,15 @@ class AssignmentController {
 
             const position = req.employee.position;
             const selfId = String(req.employee._id);
-            if (!isHR(position) && pending.assignedEmpId !== selfId) {
-                return responseHandler.error(res, "You can only cancel your own pending request", 403);
+            if (!isHR(position)) {
+                if (pending.assignedEmpId !== selfId) {
+                    return responseHandler.error(res, "You can only cancel your own pending request", 403);
+                }
+                // Without an active LM this is an HR-initiated assignment, not the employee's change request.
+                const current = await AssignmentService.getEmployeeAssignment(selfId);
+                if (!current) {
+                    return responseHandler.error(res, "This assignment is managed by HR and can't be cancelled", 403);
+                }
             }
 
             const cancelledAssignment = await AssignmentService.cancelPendingAssignment(req.params.assignmentId);
